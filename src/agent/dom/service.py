@@ -286,7 +286,7 @@ class DOM:
             if bounds is None:
                 continue
             x, y, w, h = bounds
-            if w <= 0 or h <= 0:
+            if w < 10 or h < 10:
                 continue
 
             # Computed style visibility checks
