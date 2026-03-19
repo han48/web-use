@@ -16,21 +16,25 @@ INTERACTIVE_ROLES = frozenset({
     'menuitem', 'menuitemcheckbox', 'menuitemradio', 'option', 'tab', 'treeitem',
     'slider', 'spinbutton', 'searchbox', 'switch', 'gridcell',
     'columnheader', 'rowheader',
+    'tooltip', 'tree', 'tabpanel', 'progressbar', 'scrollbar',
 })
 
 INTERACTIVE_TAGS = frozenset({
     'a', 'button', 'input', 'select', 'textarea', 'option',
     'summary', 'menu', 'menuitem',
+    'embed', 'canvas', 'object',
 })
 
 INFORMATIVE_ROLES = frozenset({
     'heading', 'article', 'note', 'paragraph', 'status',
     'alert', 'log', 'term', 'definition', 'region',
+    'tooltip', 'text', 'contentinfo', 'presentation',
 })
 
 INFORMATIVE_TAGS = frozenset({
     'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'label',
     'code', 'pre', 'th', 'td', 'article',
+    'dl', 'dt', 'dd', 'img', 'table',
 })
 
 EXCLUDED_TAGS = frozenset({
@@ -61,6 +65,9 @@ SAFE_ATTRIBUTES = frozenset({
     'contenteditable', 'haspopup', 'multiselectable',
     # Test / automation hooks
     'data-testid',
+    # Clickability signals
+    'onclick', 'href', 'tabindex',
+    'data-tooltip', 'data-id', 'data-qa', 'data-cy',
 })
 
 _MARK_PAGE_JS = """(function(boxes){
@@ -80,6 +87,25 @@ _UNMARK_PAGE_JS = """(function(){
     (window.__wu_labels__||[]).forEach(function(el){if(el.parentNode)el.parentNode.removeChild(el);});
     window.__wu_labels__=[];
 })()"""
+
+# Batch coverage check: walk up from elementFromPoint to see if our element
+# (matched by tag + bounding-box top-left) is in the hit path.
+_CHECK_COVERAGE_JS = """(function(els){
+    return els.map(function(e){
+        var top=document.elementFromPoint(e.cx,e.cy);
+        if(!top) return false;
+        var cur=top;
+        while(cur){
+            if(cur.tagName&&cur.tagName.toLowerCase()===e.tag){
+                var r=cur.getBoundingClientRect();
+                if(Math.abs(Math.round(r.left)-e.left)<=4&&Math.abs(Math.round(r.top)-e.top)<=4)
+                    return true;
+            }
+            cur=cur.parentElement;
+        }
+        return false;
+    });
+})(ELEMENTS)"""
 
 
 class DOM:
@@ -104,6 +130,22 @@ class DOM:
 
             dpr = float(dpr or 1.0)
             interactive, informative, scrollable = self._parse(snapshot, ax_result, viewport, dpr)
+
+            # Coverage check: remove elements hidden behind other elements
+            if interactive:
+                payload = [
+                    {'tag': n.tag, 'cx': n.center.x, 'cy': n.center.y,
+                     'left': n.bounding_box.left, 'top': n.bounding_box.top}
+                    for n in interactive
+                ]
+                try:
+                    visible = await self.session.execute_script(
+                        _CHECK_COVERAGE_JS.replace('ELEMENTS', json.dumps(payload))
+                    )
+                    if isinstance(visible, list) and len(visible) == len(interactive):
+                        interactive = [n for n, v in zip(interactive, visible) if v]
+                except Exception:
+                    pass  # keep all if JS fails
 
             screenshot = None
             if use_vision and interactive:
@@ -151,6 +193,7 @@ class DOM:
         node_parent  = nodes.get('parentIndex', [])
         node_backend = nodes.get('backendNodeId', [])
         node_attrs   = nodes.get('attributes', [])
+        node_values  = nodes.get('nodeValue', [])
         clickable_set = set(nodes.get('isClickable', {}).get('index', []))
 
         # -- Layout arrays --
@@ -160,6 +203,15 @@ class DOM:
 
         # DOM node index -> layout index
         node_to_layout = {ni: li for li, ni in enumerate(layout_nodes)}
+
+        # innerText map: element node index -> concatenated text from direct text-node children
+        element_text: dict[int, str] = {}
+        for i, parent_idx in enumerate(node_parent):
+            if i < len(node_types) and node_types[i] == 3 and parent_idx >= 0:
+                val_idx = node_values[i] if i < len(node_values) else -1
+                text = s(val_idx).strip() if val_idx >= 0 else ''
+                if text:
+                    element_text[parent_idx] = (element_text.get(parent_idx, '') + ' ' + text).strip()
 
         def get_bounds(li: int):
             if li >= len(layout_bounds_raw):
@@ -213,6 +265,8 @@ class DOM:
         interactive: list[DOMElementNode]    = []
         informative: list[DOMTextualNode]    = []
         scrollable:  list[ScrollElementNode] = []
+        # node index -> name for every interactive element added so far
+        interactive_name_by_ni: dict[int, str] = {}
 
         for ni in range(len(node_names)):
             # Element nodes only (nodeType 1)
@@ -246,9 +300,11 @@ class DOM:
             except ValueError:
                 pass
 
-            # Viewport check (200px tolerance for near-viewport elements)
-            if y + h < -200 or y > vh + 200 or x + w < -200 or x > vw + 200:
-                continue
+            # Viewport check — fixed/sticky elements are always on-screen
+            position = get_style(li, _P)
+            if position not in ('fixed', 'sticky'):
+                if y + h < -200 or y > vh + 200 or x + w < -200 or x > vw + 200:
+                    continue
 
             # AX info
             bid     = node_backend[ni] if ni < len(node_backend) else None
@@ -277,15 +333,39 @@ class DOM:
                 or ni in clickable_set
                 or ax_props.get('focusable') is True
                 or bool(ax_props.get('editable'))
+                or 'onclick' in attrs
+                or 'href' in attrs
+                or attrs.get('contenteditable') in ('true', '', 'plaintext-only')
+                or (attrs.get('tabindex', '-1') not in ('-1', ''))
             )
 
             is_scrollable = overflow_y in ('auto', 'scroll', 'overlay') and h >= vh * 0.4
 
             xpath = build_xpath(ni)
-            name  = ax_name or attrs.get('aria-label') or attrs.get('title') or attrs.get('placeholder') or attrs.get('name') or ''
+            inner_text = element_text.get(ni, '')
+            name  = ax_name or attrs.get('aria-label') or attrs.get('title') or attrs.get('placeholder') or attrs.get('name') or inner_text or ''
             role  = ax_role or attrs.get('role') or tag
 
+            # Discard elements hidden from assistive technology
+            if attrs.get('aria-hidden') == 'true':
+                continue
+
+            if not name:
+                continue
+
             if is_interactive:
+                # Discard child if an interactive ancestor already has the same name
+                dominated = False
+                cur = node_parent[ni] if ni < len(node_parent) else -1
+                while cur >= 0:
+                    if interactive_name_by_ni.get(cur) == name:
+                        dominated = True
+                        break
+                    cur = node_parent[cur] if cur < len(node_parent) else -1
+                if dominated:
+                    continue
+
+                interactive_name_by_ni[ni] = name
                 interactive.append(DOMElementNode(
                     tag=tag, role=role, name=name,
                     attributes=attrs,
@@ -302,10 +382,10 @@ class DOM:
                     viewport=(vw, vh),
                 ))
             else:
-                if (tag in INFORMATIVE_TAGS or ax_role in INFORMATIVE_ROLES) and ax_name:
+                if (tag in INFORMATIVE_TAGS or ax_role in INFORMATIVE_ROLES) and (ax_name or inner_text):
                     informative.append(DOMTextualNode(
                         tag=tag, role=ax_role,
-                        content=ax_name,
+                        content=ax_name or inner_text,
                         center=CenterCord(x=cx, y=cy),
                         xpath={'frame': '', 'element': xpath},
                         viewport=(vw, vh),
