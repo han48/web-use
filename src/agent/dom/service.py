@@ -255,11 +255,19 @@ class DOM:
                           for p in ax_node.get('properties', [])},
             }
 
-        # -- Parent->children map for XPath construction --
-        parent_to_children: dict[int, list[int]] = {}
+        # -- Pre-compute sibling position index for O(1) XPath construction --
+        # sibling_pos[ni] = 1-based position among same-tag siblings under the same parent
+        sibling_pos: dict[int, int] = {}
+        tag_count: dict[tuple[int, str], int] = {}  # (parent_idx, tag) -> count so far
         for i, p in enumerate(node_parent):
-            if p >= 0:
-                parent_to_children.setdefault(p, []).append(i)
+            if p < 0:
+                continue
+            tag_i = s(node_names[i]).lower() if i < len(node_names) else ''
+            if not tag_i or tag_i.startswith('#'):
+                continue
+            key = (p, tag_i)
+            tag_count[key] = tag_count.get(key, 0) + 1
+            sibling_pos[i] = tag_count[key]
 
         def build_xpath(ni: int) -> str:
             parts = []
@@ -268,10 +276,9 @@ class DOM:
                 tag = s(node_names[cur]).lower()
                 if not tag or tag.startswith('#'):
                     break
+                pos = sibling_pos.get(cur, 1)
+                parts.insert(0, f'{tag}[{pos}]')
                 par = node_parent[cur] if cur < len(node_parent) else -1
-                siblings = parent_to_children.get(par, []) if par >= 0 else []
-                idx = sum(1 for sib in siblings if sib < cur and s(node_names[sib]).lower() == tag) + 1
-                parts.insert(0, f'{tag}[{idx}]')
                 if par < 0:
                     break
                 cur = par

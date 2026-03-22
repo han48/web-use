@@ -3,6 +3,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 import platform
+import io
+
+try:
+    from PIL import Image as _PILImage
+except ImportError:
+    _PILImage = None
 
 if TYPE_CHECKING:
     from src.agent.session import Session
@@ -51,10 +57,8 @@ class Context:
             'tool_result':          tool_result,
             'query':                query,
         })
-        if use_vision and browser_state.screenshot:
-            from PIL import Image
-            import io
-            img = Image.open(io.BytesIO(browser_state.screenshot))
+        if use_vision and browser_state.screenshot and _PILImage:
+            img = _PILImage.open(io.BytesIO(browser_state.screenshot))
             return ImageMessage(content=content, images=[img])
         return HumanMessage(content=content)
 

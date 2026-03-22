@@ -200,6 +200,7 @@ class Agent(BaseAgent):
                 message.content = content
                 self.state.messages.append(message)
                 self._scrub_messages()
+                self.state.error_messages.clear()
                 consecutive_failures = 0
             else:
                 content = tool_result_obj.error

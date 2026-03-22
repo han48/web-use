@@ -257,9 +257,10 @@ class Session:
     # ------------------------------------------------------------------
 
     async def get_all_tabs(self) -> list[Tab]:
-        tabs = []
-        for i, (tid, info) in enumerate(self._targets.items()):
-            sid = self._sessions.get(tid, '')
+        items = list(self._targets.items())
+        sids  = [self._sessions.get(tid, '') for tid, _ in items]
+
+        async def _fetch(tid: str, sid: str, info: dict):
             try:
                 result = await self.browser.send('Runtime.evaluate', {
                     'expression': '({url: document.URL, title: document.title})',
@@ -273,8 +274,13 @@ class Session:
             except Exception:
                 url   = info.get('url', '')
                 title = info.get('title', '')
-            tabs.append(Tab(id=i, url=url, title=title, target_id=tid, session_id=sid))
-        return tabs
+            return url, title
+
+        results = await asyncio.gather(*(_fetch(tid, sid, info) for (tid, info), sid in zip(items, sids)))
+        return [
+            Tab(id=i, url=url, title=title, target_id=tid, session_id=sid)
+            for i, ((tid, _), sid, (url, title)) in enumerate(zip(items, sids, results))
+        ]
 
     async def get_current_tab(self) -> Tab | None:
         if not self._current_target_id:
@@ -290,11 +296,12 @@ class Session:
             live  = result.get('result', {}).get('value', {})
             url   = live.get('url',   info.get('url', ''))
             title = live.get('title', info.get('title', ''))
+            self._targets[tid]['url']   = url
+            self._targets[tid]['title'] = title
         except Exception:
             url   = info.get('url', '')
             title = info.get('title', '')
-        tabs = await self.get_all_tabs()
-        idx  = next((t.id for t in tabs if t.target_id == tid), 0)
+        idx = next((i for i, t in enumerate(self._targets) if t == tid), 0)
         return Tab(id=idx, url=url, title=title, target_id=tid, session_id=sid)
 
     async def new_tab(self) -> Tab:
@@ -460,7 +467,7 @@ class Session:
         """Simulate human-like mouse movement via a quadratic bezier curve."""
         sid = self._get_current_session_id()
         x0, y0 = self._mouse_x, self._mouse_y
-        steps = random.randint(8, 14)
+        steps = random.randint(5, 8)
         # Random control point offset for natural arc
         cx = (x0 + x) / 2 + random.randint(-80, 80)
         cy = (y0 + y) / 2 + random.randint(-40, 40)
@@ -471,7 +478,7 @@ class Session:
             await self.browser.send('Input.dispatchMouseEvent', {
                 'type': 'mouseMoved', 'x': px, 'y': py,
             }, session_id=sid)
-            await asyncio.sleep(random.uniform(0.005, 0.018))
+            await asyncio.sleep(random.uniform(0.002, 0.008))
         self._mouse_x, self._mouse_y = x, y
 
     async def click_at(self, x: int, y: int):
@@ -505,14 +512,11 @@ class Session:
             }, session_id=sid)
             # Variable inter-keystroke delay to mimic human typing rhythm
             if char == ' ':
-                delay = random.uniform(0.08, 0.18)
+                delay = random.uniform(0.03, 0.07)
             elif char in '.,!?;:\n':
-                delay = random.uniform(0.10, 0.25)
+                delay = random.uniform(0.04, 0.10)
             else:
-                delay = random.uniform(0.04, 0.13)
-            # 5% chance of a brief "thinking" pause between characters
-            if random.random() < 0.05:
-                delay += random.uniform(0.20, 0.45)
+                delay = random.uniform(0.02, 0.05)
             await asyncio.sleep(delay)
 
     async def key_press(self, keys: str):
