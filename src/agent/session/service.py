@@ -57,9 +57,10 @@ class Session:
         # CDP session state
         self._targets:    dict[str, dict]           = {}
         self._sessions:   dict[str, str]            = {}
-        self._lifecycle:  dict[str, deque]          = {}
-        self._page_ready: dict[str, asyncio.Event]  = {}
-        self._current_target_id: str | None         = None
+        self._lifecycle:    dict[str, deque]          = {}
+        self._page_ready:   dict[str, asyncio.Event]  = {}
+        self._page_loading: dict[str, bool]           = {}  # session_id -> True while navigation in progress
+        self._current_target_id: str | None           = None
 
         self._browser_state: BrowserState = None
         self.crashed: bool = False
@@ -176,6 +177,7 @@ class Session:
             self._targets.clear()
             self._sessions.clear()
             self._lifecycle.clear()
+            self._page_loading.clear()
             for ev in self._page_ready.values():
                 ev.set()
             self._page_ready.clear()
@@ -208,6 +210,7 @@ class Session:
             self._targets.pop(target_id, None)
             self._sessions.pop(target_id, None)
             self._lifecycle.pop(session_id, None)
+            self._page_loading.pop(session_id, None)
             ready = self._page_ready.pop(session_id, None)
             if ready:
                 ready.set()  # unblock any waiter on a closing tab
@@ -230,6 +233,12 @@ class Session:
                 'name': name, 'loaderId': event.get('loaderId'),
                 'timestamp': event.get('timestamp'),
             })
+        # Track navigation lifecycle
+        if name == 'commit':
+            self._page_loading[session_id] = True
+        elif name == 'networkIdle':
+            self._page_loading[session_id] = False
+
         # Signal any waiter on networkIdle or load
         if name in ('networkIdle', 'load'):
             ready = self._page_ready.get(session_id)
@@ -357,6 +366,10 @@ class Session:
         if not sid:
             return
 
+        # Only wait if a navigation is currently in progress
+        if not self._page_loading.get(sid, False):
+            return
+
         # Arm an asyncio.Event that _on_lifecycle_event will set on networkIdle/load
         ready = asyncio.Event()
         self._page_ready[sid] = ready
@@ -367,6 +380,7 @@ class Session:
             pass
         finally:
             self._page_ready.pop(sid, None)
+            self._page_loading.pop(sid, None)
 
         await asyncio.sleep(0.3)  # brief render buffer
 
