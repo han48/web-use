@@ -1,5 +1,8 @@
 from __future__ import annotations
+import logging
 from src.agent.watchdog.base import BaseWatchdog
+
+logger = logging.getLogger(__name__)
 
 
 class CrashWatchdog(BaseWatchdog):
@@ -22,17 +25,20 @@ class CrashWatchdog(BaseWatchdog):
             (tid for tid, sid in self.session._sessions.items() if sid == session_id),
             None,
         )
-        print(f'[CrashWatchdog] Tab crashed (target={target_id}, session={session_id})')
+
+        # Always clean up session state to unblock any waiters and avoid leaks.
+        # This handles both tracked tabs and untracked sub-frames / service workers.
+        self.session._lifecycle.pop(session_id, None)
+        self.session._page_loading.pop(session_id, None)
+        ready = self.session._page_ready.pop(session_id, None)
+        if ready:
+            ready.set()
 
         if target_id:
+            # Tracked tab crashed — clean up target/session maps
+            logger.warning('Tab crashed (target=%s, session=%s)', target_id, session_id)
             self.session._targets.pop(target_id, None)
             self.session._sessions.pop(target_id, None)
-            self.session._lifecycle.pop(session_id, None)
-
-            # Signal any pending page-load waiter so it doesn't hang
-            ready = self.session._page_ready.pop(session_id, None)
-            if ready:
-                ready.set()
 
             # Switch current target to another tab if possible
             if self.session._current_target_id == target_id:
@@ -43,3 +49,6 @@ class CrashWatchdog(BaseWatchdog):
             # If no tabs remain, mark session as crashed so the agent can abort
             if not self.session._sessions:
                 self.session.crashed = True
+        else:
+            # Untracked session (sub-frame, service worker, etc.) — log quietly
+            logger.debug('Sub-frame/worker crashed (session=%s) — ignored', session_id)
