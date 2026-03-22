@@ -284,7 +284,9 @@ class Browser:
             resp = await http.get(f'{http_url.rstrip("/")}/json/version')
             return resp.json()['webSocketDebuggerUrl']
 
-    async def close_browser(self):
+    async def disconnect(self):
+        """Close the CDP WebSocket connection without terminating the browser process.
+        The browser and its tabs remain open and can be reconnected to later."""
         try:
             if self._client:
                 await self._client.__aexit__(None, None, None)
@@ -293,6 +295,8 @@ class Browser:
         finally:
             self._client = None
 
+    async def close_browser(self):
+        await self.disconnect()
         try:
             if self._process:
                 self._process.terminate()

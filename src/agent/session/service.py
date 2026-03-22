@@ -163,6 +163,19 @@ class Session:
         except Exception:
             pass
 
+    async def disconnect(self):
+        """Disconnect from the browser without closing tabs or terminating the process.
+        The browser stays alive and can be reconnected to in a future session."""
+        self._targets.clear()
+        self._sessions.clear()
+        self._lifecycle.clear()
+        self._page_loading.clear()
+        for ev in self._page_ready.values():
+            ev.set()
+        self._page_ready.clear()
+        self._current_target_id = None
+        await self.browser.disconnect()
+
     async def close_session(self):
         try:
             for target_id, session_id in list(self._sessions.items()):

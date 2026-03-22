@@ -38,6 +38,7 @@ class Agent(BaseAgent):
         log_to_console: bool = True,
         event_subscriber: Callable[[AgentEvent], None] | None = None,
         sensitive_data: dict[str, str] = {},
+        keep_alive: bool = False,
     ) -> None:
         self.browser = Browser(config=config)
         self.session = Session(browser=self.browser)
@@ -53,6 +54,7 @@ class Agent(BaseAgent):
         self.use_vision = use_vision
         self.llm = llm
         self.sensitive_data = sensitive_data
+        self.keep_alive = keep_alive
         self._cached_system_message = None
 
         self.event = Event()
@@ -271,7 +273,10 @@ class Agent(BaseAgent):
     async def close(self):
         self.event.close()
         try:
-            await self.session.close_session()
+            if self.keep_alive:
+                await self.session.disconnect()
+            else:
+                await self.session.close_session()
         except Exception:
             pass
         finally:
