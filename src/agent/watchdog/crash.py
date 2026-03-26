@@ -1,5 +1,8 @@
 from __future__ import annotations
+import logging
 from src.agent.watchdog.base import BaseWatchdog
+
+logger = logging.getLogger(__name__)
 
 
 class CrashWatchdog(BaseWatchdog):
@@ -11,35 +14,25 @@ class CrashWatchdog(BaseWatchdog):
     """
 
     async def attach(self) -> None:
-        self.session.browser.on('Inspector.targetCrashed', self._on_crash)
+        self.session.on('Inspector.targetCrashed', self._on_crash)
 
     def _on_crash(self, event, session_id=None) -> None:
         if not session_id:
             return
 
-        # Find which target this session belongs to
-        target_id = next(
-            (tid for tid, sid in self.session._sessions.items() if sid == session_id),
-            None,
-        )
-        print(f'[CrashWatchdog] Tab crashed (target={target_id}, session={session_id})')
+        target_id = self.session._session_manager.find_target_by_session(session_id)
+
+        self.session._lifecycle.pop(session_id, None)
+        self.session._page_loading.pop(session_id, None)
+        ready = self.session._page_ready.pop(session_id, None)
+        if ready:
+            ready.set()
 
         if target_id:
-            self.session._targets.pop(target_id, None)
-            self.session._sessions.pop(target_id, None)
-            self.session._lifecycle.pop(session_id, None)
-
-            # Signal any pending page-load waiter so it doesn't hang
-            ready = self.session._page_ready.pop(session_id, None)
-            if ready:
-                ready.set()
-
-            # Switch current target to another tab if possible
-            if self.session._current_target_id == target_id:
-                self.session._current_target_id = (
-                    next(iter(self.session._sessions), None)
-                )
-
-            # If no tabs remain, mark session as crashed so the agent can abort
+            logger.warning('Tab crashed (target=%s, session=%s)', target_id, session_id)
+            self.session._session_manager.remove_by_target(target_id)
+            self.session._set_current_target_id(self.session._session_manager.current_target_id)
             if not self.session._sessions:
                 self.session.crashed = True
+        else:
+            logger.debug('Sub-frame/worker crashed (session=%s) — ignored', session_id)
