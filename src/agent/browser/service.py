@@ -19,7 +19,7 @@ import httpx
 from src.agent.browser.config import BROWSER_ARGS, BrowserConfig
 from src.agent.browser.events import BrowserEvent, NavigationSettledEvent, NavigationStartedEvent
 from src.agent.browser.page import Page
-from src.agent.browser.session_manager import SessionManager
+from src.agent.browser.session import SessionManager
 from src.agent.session.views import BrowserState, Tab
 from src.cdp import Client
 
