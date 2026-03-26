@@ -19,7 +19,7 @@ import httpx
 from src.agent.browser.config import BROWSER_ARGS, BrowserConfig
 from src.agent.browser.events import BrowserEvent, NavigationSettledEvent, NavigationStartedEvent
 from src.agent.browser.page import Page
-from src.agent.browser.session import SessionManager
+from src.agent.browser.session import Session
 from src.agent.browser.views import BrowserState, Tab
 from src.cdp import Client
 
@@ -68,7 +68,7 @@ class Browser:
         self._client: Client | None = None
         self._resolved_attach_ws_url: str | None = None
 
-        self._session_manager = SessionManager()
+        self._session_manager = Session()
         self._targets = self._session_manager.targets
         self._sessions = self._session_manager.sessions
         self._lifecycle: dict[str, deque] = {}
