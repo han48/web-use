@@ -3,11 +3,11 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from src.agent.session import Session
+    from src.agent.browser import Browser
 
 
 class BaseWatchdog(ABC):
-    def __init__(self, session: 'Session'):
+    def __init__(self, session: 'Browser'):
         self.session = session
 
     @abstractmethod

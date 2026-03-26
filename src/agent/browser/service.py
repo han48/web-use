@@ -20,7 +20,7 @@ from src.agent.browser.config import BROWSER_ARGS, BrowserConfig
 from src.agent.browser.events import BrowserEvent, NavigationSettledEvent, NavigationStartedEvent
 from src.agent.browser.page import Page
 from src.agent.browser.session import SessionManager
-from src.agent.session.views import BrowserState, Tab
+from src.agent.browser.views import BrowserState, Tab
 from src.cdp import Client
 
 logger = logging.getLogger(__name__)
@@ -500,7 +500,7 @@ class Browser:
         except Exception:
             pass
 
-        script_path = Path(__file__).resolve().parent.parent / 'session' / 'script.js'
+        script_path = Path(__file__).resolve().parent / 'script.js'
         anti_detect = script_path.read_text(encoding='utf-8')
         try:
             await self.send('Page.addScriptToEvaluateOnNewDocument', {'source': anti_detect}, session_id=session_id)

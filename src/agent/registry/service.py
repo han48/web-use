@@ -13,11 +13,12 @@ class Registry:
         self.extensions[name] = obj
 
     def _build_kwargs(self, tool: Tool, tool_params: dict) -> dict:
-        """Merge extensions into tool_params, but only for params the tool accepts."""
+        """Merge extensions into tool_params, filtered to only params the tool accepts."""
         sig = inspect.signature(tool.function)
         accepted = set(sig.parameters)
         extensions = {k: v for k, v in self.extensions.items() if k in accepted}
-        return extensions | tool_params
+        filtered_params = {k: v for k, v in tool_params.items() if k in accepted}
+        return extensions | filtered_params
 
     def get_tools(self, exclude: list[str] = []) -> list[Tool]:
         if not exclude:

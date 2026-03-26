@@ -6,7 +6,7 @@ import json
 import time
 
 if TYPE_CHECKING:
-    from src.agent.session import Session
+    from src.agent.browser import Browser
 
 
 COMPUTED_STYLES = ['display', 'visibility', 'opacity', 'cursor', 'overflow-y', 'position']
@@ -110,7 +110,7 @@ _CHECK_COVERAGE_JS = """(function(els){
 
 
 class DOM:
-    def __init__(self, session: 'Session'):
+    def __init__(self, session: 'Browser'):
         self.session = session
 
     async def get_state(self, use_vision: bool = False) -> tuple[bytes | None, DOMState]:

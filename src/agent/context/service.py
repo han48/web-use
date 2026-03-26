@@ -11,7 +11,7 @@ except ImportError:
     _PILImage = None
 
 if TYPE_CHECKING:
-    from src.agent.session import Session
+    from src.agent.browser import Browser
 
 _template_cache: dict[str, str] = {}
 
@@ -24,11 +24,11 @@ def _load_template(filename: str) -> str:
 class Context:
     """Builds prompt messages (system, state, task) for the agent loop."""
 
-    def __init__(self, session: 'Session'):
+    def __init__(self, session: 'Browser'):
         self.session = session
 
     def system(self, instructions: list[str] = [], max_steps: int = 25) -> SystemMessage:
-        browser = self.session.browser
+        browser = self.session
         template = _load_template('system.md')
         content = template.format(**{
             'datetime':      datetime.now().strftime('%A, %B %d, %Y'),

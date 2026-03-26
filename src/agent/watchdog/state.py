@@ -6,7 +6,7 @@ from time import monotonic
 
 from src.agent.browser.events import NavigationSettledEvent, NavigationStartedEvent, StateInvalidatedEvent
 from src.agent.dom import DOM
-from src.agent.session.views import BrowserState
+from src.agent.browser.views import BrowserState
 from src.agent.watchdog.base import BaseWatchdog
 
 logger = logging.getLogger(__name__)

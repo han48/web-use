@@ -4,7 +4,6 @@ from src.agent.tools import BUILTIN_TOOLS
 from src.agent.registry import Registry
 from src.agent.views import AgentResult, AgentState
 from src.agent.browser import Browser, BrowserConfig
-from src.agent.session import Session
 from src.agent.context import Context
 from src.providers.events import LLMEventType
 from src.messages import ToolMessage
@@ -41,8 +40,7 @@ class Agent(BaseAgent):
         keep_alive: bool = False,
     ) -> None:
         self.browser = Browser(config=config)
-        self.session = Session(browser=self.browser)
-        self.context = Context(session=self.session)
+        self.context = Context(session=self.browser)
         self.registry = Registry(
             BUILTIN_TOOLS + additional_tools + ([human_tool] if include_human_in_loop else [])
         )
@@ -121,7 +119,7 @@ class Agent(BaseAgent):
         for step in range(self.state.max_steps):
             self.state.step = step
 
-            if self.session.crashed:
+            if self.browser.crashed:
                 error = 'Browser crashed — all tabs are gone. Aborting.'
                 self.event.emit(AgentEvent(type=EventType.ERROR, data={'step': step, 'error': error}))
                 return AgentResult(is_done=False, error=error)
@@ -243,8 +241,8 @@ class Agent(BaseAgent):
     async def ainvoke(self, task: str) -> AgentResult:
         self.state.reset()
         self.state.task = task
-        await self.session.init_session()
-        self.registry.add_extension('session', self.session)
+        await self.browser.ensure_open()
+        self.registry.add_extension('session', self.browser)
         self.registry.add_extension('llm', self.llm)
         try:
             return await self.aloop()
@@ -274,11 +272,11 @@ class Agent(BaseAgent):
         self.event.close()
         try:
             if self.keep_alive:
-                await self.session.disconnect()
+                await self.browser.disconnect()
             else:
-                await self.session.close_session()
+                await self.browser.close_browser()
         except Exception:
             pass
         finally:
-            self.session = None
+            pass  # browser closed
             self.browser = None
