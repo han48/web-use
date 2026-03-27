@@ -63,8 +63,8 @@ class ChatGoogle(BaseChatLLM):
         return "google"
 
     def _is_thinking_model(self) -> bool:
-        """Check if the model supports extended thinking (Gemini 2.5 series)."""
-        return "2.5" in self._model
+        """Check if the model supports extended thinking (Gemini 2.5+ series)."""
+        return "2.5" in self._model or "3." in self._model or self._model.startswith("gemini-3")
 
     def _convert_messages(
         self, messages: List[BaseMessage]
@@ -117,9 +117,14 @@ class ChatGoogle(BaseChatLLM):
                 model_parts: list[types.Part] = []
                 if msg.thinking:
                     model_parts.append(types.Part(thought=True, text=msg.thinking))
-                model_parts.append(
-                    types.Part.from_function_call(name=msg.name, args=msg.params)
-                )
+                fc_part = types.Part.from_function_call(name=msg.name, args=msg.params)
+                if msg.thinking_signature:
+                    sig = msg.thinking_signature
+                    if isinstance(sig, str):
+                        import base64 as _b64
+                        sig = _b64.b64decode(sig)
+                    fc_part.thought_signature = sig
+                model_parts.append(fc_part)
                 raw_contents.append(types.Content(role="model", parts=model_parts))
 
                 # Function response
@@ -238,6 +243,18 @@ class ChatGoogle(BaseChatLLM):
             thinking_tokens=thinking_tokens,
         )
 
+    def _extract_thought_signature(self, response: Any) -> bytes | None:
+        """Extract thought_signature from the function_call Part (thinking models only)."""
+        try:
+            if response.candidates and response.candidates[0].content:
+                for part in response.candidates[0].content.parts:
+                    if getattr(part, "function_call", None) is not None:
+                        sig = getattr(part, "thought_signature", None)
+                        return sig if sig else None
+        except (AttributeError, IndexError):
+            pass
+        return None
+
     def _extract_thinking(self, response: Any) -> Optional[str]:
         """
         Extract thinking/reasoning content from the response parts.
@@ -300,6 +317,9 @@ class ChatGoogle(BaseChatLLM):
         if function_calls:
             fc = function_calls[0]
             fc_id = getattr(fc, "id", None) or f"call_{uuid.uuid4().hex[:8]}"
+            thinking_content = self._extract_thinking(response)
+            thought_sig = self._extract_thought_signature(response)
+            thinking = Thinking(content=thinking_content, signature=thought_sig) if (thinking_content or thought_sig) else None
             return LLMEvent(
                 type=LLMEventType.TOOL_CALL,
                 tool_call=ToolCall(
@@ -307,6 +327,7 @@ class ChatGoogle(BaseChatLLM):
                     name=fc.name,
                     params=dict(fc.args) if fc.args else {}
                 ),
+                thinking=thinking,
                 usage=usage
             )
 
@@ -432,6 +453,7 @@ class ChatGoogle(BaseChatLLM):
                         if fc:
                             fc_id = f"call_{uuid.uuid4().hex[:8]}"
                             tool_params = dict(fc.args) if fc.args else {}
+                            thought_sig = getattr(part, "thought_signature", None)
                             chunk_usage = self._extract_usage(chunk.usage_metadata) if hasattr(chunk, "usage_metadata") and chunk.usage_metadata else usage
                             yield LLMStreamEvent(
                                 type=LLMStreamEventType.TOOL_CALL,
@@ -440,6 +462,7 @@ class ChatGoogle(BaseChatLLM):
                                     name=fc.name,
                                     params=tool_params
                                 ),
+                                thinking=Thinking(content=None, signature=thought_sig) if thought_sig else None,
                                 usage=chunk_usage
                             )
             except (AttributeError, IndexError):
@@ -508,6 +531,7 @@ class ChatGoogle(BaseChatLLM):
                         if fc:
                             fc_id = f"call_{uuid.uuid4().hex[:8]}"
                             tool_params = dict(fc.args) if fc.args else {}
+                            thought_sig = getattr(part, "thought_signature", None)
                             chunk_usage = self._extract_usage(chunk.usage_metadata) if hasattr(chunk, "usage_metadata") and chunk.usage_metadata else usage
                             yield LLMStreamEvent(
                                 type=LLMStreamEventType.TOOL_CALL,
@@ -516,6 +540,7 @@ class ChatGoogle(BaseChatLLM):
                                     name=fc.name,
                                     params=tool_params
                                 ),
+                                thinking=Thinking(content=None, signature=thought_sig) if thought_sig else None,
                                 usage=chunk_usage
                             )
             except (AttributeError, IndexError):
