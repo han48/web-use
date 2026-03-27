@@ -43,7 +43,8 @@ class Context:
 
     async def state(self, query: str, step: int, max_steps: int,
                     tool_result: str = 'No previous action.',
-                    use_vision: bool = False) -> HumanMessage | ImageMessage:
+                    use_vision: bool = False,
+                    nudge: str = '') -> HumanMessage | ImageMessage:
         browser_state = await self.session.get_state(use_vision=use_vision)
         template = _load_template('state.md')
         content = template.format(**{
@@ -57,6 +58,8 @@ class Context:
             'tool_result':          tool_result,
             'query':                query,
         })
+        if nudge:
+            content += f'\n\n⚠️ LOOP DETECTED:\n{nudge}'
         if use_vision and browser_state.screenshot and _PILImage:
             img = _PILImage.open(io.BytesIO(browser_state.screenshot))
             return ImageMessage(content=content, images=[img])

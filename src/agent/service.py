@@ -5,6 +5,7 @@ from src.agent.registry import Registry
 from src.agent.views import AgentResult, AgentState
 from src.agent.browser import Browser, BrowserConfig
 from src.agent.context import Context
+from src.agent.loop import LoopGuard
 from src.providers.events import LLMEventType
 from src.messages import ToolMessage
 from src.agent.base import BaseAgent
@@ -54,6 +55,7 @@ class Agent(BaseAgent):
         self.sensitive_data = sensitive_data
         self.keep_alive = keep_alive
         self._cached_system_message = None
+        self._loop_guard = LoopGuard()
 
         self.event = Event()
         if event_subscriber is not None:
@@ -115,6 +117,7 @@ class Agent(BaseAgent):
         self.state.messages.append(self.context.task(self.state.task))
         consecutive_failures = 0
         tool_result = "No previous action."
+        self._loop_guard.reset()
 
         for step in range(self.state.max_steps):
             self.state.step = step
@@ -124,14 +127,27 @@ class Agent(BaseAgent):
                 self.event.emit(AgentEvent(type=EventType.ERROR, data={'step': step, 'error': error}))
                 return AgentResult(is_done=False, error=error)
 
+            nudge = self._loop_guard.check()
             state_msg = await self.context.state(
                 query=self.state.task,
                 step=step,
                 max_steps=self.state.max_steps,
                 tool_result=tool_result,
                 use_vision=self.use_vision,
+                nudge=nudge or '',
             )
+            if nudge:
+                self.event.emit(AgentEvent(type=EventType.ERROR, data={'step': step, 'error': f'Loop detected: {nudge}'}))
             self.state.messages.append(state_msg)
+
+            # Record page fingerprint (browser state is freshly populated by context.state)
+            bs = self.browser._browser_state
+            if bs and bs.current_tab:
+                dom_text = (
+                    bs.dom_state.interactive_elements_to_string() +
+                    bs.dom_state.informative_elements_to_string()
+                )
+                self._loop_guard.record_page(bs.current_tab.url, dom_text)
 
             # Reason: call LLM with tools
             message: ToolMessage | None = None
@@ -193,6 +209,8 @@ class Agent(BaseAgent):
                 tool_name=tool_name,
                 tool_params=exec_params,
             )
+
+            self._loop_guard.record_action(tool_name, exec_params)
 
             if tool_result_obj.is_success:
                 content = tool_result_obj.content
