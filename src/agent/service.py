@@ -210,7 +210,7 @@ class Agent(BaseAgent):
                 tool_params=exec_params,
             )
 
-            self._loop_guard.record_action(tool_name, exec_params)
+            self._loop_guard.record_action(tool_name, exec_params, is_success=tool_result_obj.is_success)
 
             if tool_result_obj.is_success:
                 content = tool_result_obj.content
