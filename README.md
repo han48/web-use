@@ -6,7 +6,7 @@
     <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
   </a>
   <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python">
-  <img src="https://img.shields.io/badge/Powered%20by-Playwright-45ba63?logo=playwright&logoColor=white" alt="Powered by Playwright">
+  <img src="https://img.shields.io/badge/Powered%20by-CDP-orange" alt="Powered by CDP">
   <br>
 
   <a href="https://x.com/CursorTouch">
@@ -34,8 +34,8 @@
 **Clone the repository:**
 
 ```bash
-git clone https://github.com/CursorTouch/Web-Navigator.git
-cd Web-Navigator
+git clone https://github.com/CursorTouch/Web-Use.git
+cd Web-Use
 ```
 
 **Install dependencies:**
@@ -44,10 +44,10 @@ cd Web-Navigator
 uv sync
 ```
 
-**Setup Playwright:**
+**Launch Chrome with remote debugging:**
 
 ```bash
-playwright install
+chrome --remote-debugging-port=9222
 ```
 
 ---
@@ -55,14 +55,14 @@ playwright install
 **Setting up the `.env` file:**
 
 ```bash
-GOOGLE_API_KEY=""
+GOOGLE_API_KEY="<API_KEY_HERE>"
 ```
 
 Basic setup of the agent.
 
 ```python
 from src.inference.gemini import ChatGemini
-from src.agent.web import WebAgent
+from src.agent.web import Agent
 from dotenv import load_dotenv
 import os
 
@@ -118,7 +118,7 @@ Made with ❤️ by [Jeomon George](https://github.com/Jeomon), [Muhammad Yaseen
 
 ## 📒References
 
-- **[Playwright Documentation](https://playwright.dev/docs/intro)**  
+- **[Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/)**  
 - **[LangGraph Examples](https://github.com/langchain-ai/langgraph/blob/main/examples/web-navigation/web_voyager.ipynb)**  
 - **[vimGPT](https://github.com/ishan0102/vimGPT)**  
 - **[WebVoyager](https://github.com/MinorJerry/WebVoyager)**  
