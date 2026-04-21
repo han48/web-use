@@ -1,6 +1,6 @@
 from src.agent.events import AgentEvent, Event, EventType, ConsoleEventSubscriber, FileEventSubscriber
 from src.messages import AIMessage, HumanMessage
-from src.agent.tools import BUILTIN_TOOLS
+from src.agent.tools import BUILTIN_TOOLS, human_tool
 from src.agent.registry import Registry
 from src.agent.views import AgentResult, AgentState
 from src.agent.browser import Browser, BrowserConfig
@@ -20,7 +20,6 @@ if TYPE_CHECKING:
     from src.providers.base import BaseChatLLM
 
 DONE_TOOL_NAME = "done_tool"
-_NON_TOOL_PARAMS = {"thought"}
 
 
 class Agent(BaseAgent):
@@ -33,6 +32,8 @@ class Agent(BaseAgent):
         max_steps: int = 25,
         max_consecutive_failures: int = 3,
         use_vision: bool = False,
+        use_web_mcp: bool = False,
+        enable_loop_detection: bool = False,
         include_human_in_loop: bool = False,
         log_to_file: bool = False,
         log_to_console: bool = True,
@@ -42,8 +43,10 @@ class Agent(BaseAgent):
     ) -> None:
         self.browser = Browser(config=config)
         self.context = Context(session=self.browser)
+        self.use_web_mcp = use_web_mcp
         self.registry = Registry(
-            BUILTIN_TOOLS + additional_tools + ([human_tool] if include_human_in_loop else [])
+            tools=BUILTIN_TOOLS + additional_tools + ([human_tool] if include_human_in_loop else []),
+            browser=self.browser if use_web_mcp else None
         )
         self.state = AgentState(
             max_steps=max_steps,
@@ -55,7 +58,7 @@ class Agent(BaseAgent):
         self.sensitive_data = sensitive_data
         self.keep_alive = keep_alive
         self._cached_system_message = None
-        self._loop_guard = LoopGuard()
+        self._loop_guard = LoopGuard() if enable_loop_detection else None
 
         self.event = Event()
         if event_subscriber is not None:
@@ -117,7 +120,8 @@ class Agent(BaseAgent):
         self.state.messages.append(self.context.task(self.state.task))
         consecutive_failures = 0
         tool_result = "No previous action."
-        self._loop_guard.reset()
+        if self._loop_guard:
+            self._loop_guard.reset()
 
         for step in range(self.state.max_steps):
             self.state.step = step
@@ -127,7 +131,9 @@ class Agent(BaseAgent):
                 self.event.emit(AgentEvent(type=EventType.ERROR, data={'step': step, 'error': error}))
                 return AgentResult(is_done=False, error=error)
 
-            nudge = self._loop_guard.check()
+            nudge=None
+            if self._loop_guard:
+                nudge = self._loop_guard.check()
             state_msg = await self.context.state(
                 query=self.state.task,
                 step=step,
@@ -147,11 +153,16 @@ class Agent(BaseAgent):
                     bs.dom_state.interactive_elements_to_string() +
                     bs.dom_state.informative_elements_to_string()
                 )
-                self._loop_guard.record_page(bs.current_tab.url, dom_text)
+                if self._loop_guard:
+                    self._loop_guard.record_page(bs.current_tab.url, dom_text)
 
             # Reason: call LLM with tools
             message: ToolMessage | None = None
             last_error: Exception | None = None
+            
+            if self.use_web_mcp:
+                await self.registry.refresh_dynamic_tools()
+            
             for attempt in range(self.state.max_consecutive_failures):
                 try:
                     messages = list(chain(self.state.messages, self.state.error_messages))
@@ -199,7 +210,7 @@ class Agent(BaseAgent):
                     data={
                         "step": step,
                         "tool_name": tool_name,
-                        "tool_params": {k: v for k, v in tool_params.items() if k not in _NON_TOOL_PARAMS},
+                        "tool_params": {k: v for k, v in tool_params.items() if k not in self.registry.NON_TOOL_PARAMS},
                     },
                 ))
 
@@ -210,7 +221,8 @@ class Agent(BaseAgent):
                 tool_params=exec_params,
             )
 
-            self._loop_guard.record_action(tool_name, exec_params, is_success=tool_result_obj.is_success)
+            if self._loop_guard:
+                self._loop_guard.record_action(tool_name, exec_params, is_success=tool_result_obj.is_success)
 
             if tool_result_obj.is_success:
                 content = tool_result_obj.content
