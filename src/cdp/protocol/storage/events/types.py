@@ -7,12 +7,6 @@ if TYPE_CHECKING:
     from cdp.protocol.network.types import RequestId
     from cdp.protocol.network.types import TimeSinceEpoch
     from cdp.protocol.page.types import FrameId
-    from cdp.protocol.storage.types import AttributionReportingAggregatableResult
-    from cdp.protocol.storage.types import AttributionReportingEventLevelResult
-    from cdp.protocol.storage.types import AttributionReportingReportResult
-    from cdp.protocol.storage.types import AttributionReportingSourceRegistration
-    from cdp.protocol.storage.types import AttributionReportingSourceRegistrationResult
-    from cdp.protocol.storage.types import AttributionReportingTriggerRegistration
     from cdp.protocol.storage.types import InterestGroupAccessType
     from cdp.protocol.storage.types import InterestGroupAuctionEventType
     from cdp.protocol.storage.types import InterestGroupAuctionFetchType
@@ -116,24 +110,3 @@ class storageBucketCreatedOrUpdatedEvent(TypedDict, total=True):
     bucketInfo: StorageBucketInfo
 class storageBucketDeletedEvent(TypedDict, total=True):
     bucketId: str
-class attributionReportingSourceRegisteredEvent(TypedDict, total=True):
-    registration: AttributionReportingSourceRegistration
-    result: AttributionReportingSourceRegistrationResult
-class attributionReportingTriggerRegisteredEvent(TypedDict, total=True):
-    registration: AttributionReportingTriggerRegistration
-    eventLevel: AttributionReportingEventLevelResult
-    aggregatable: AttributionReportingAggregatableResult
-class attributionReportingReportSentEvent(TypedDict, total=True):
-    url: str
-    body: Dict[str, Any]
-    result: AttributionReportingReportResult
-    netError: NotRequired[int]
-    """If result is sent, populated with net/HTTP status."""
-    netErrorName: NotRequired[str]
-    httpStatusCode: NotRequired[int]
-class attributionReportingVerboseDebugReportSentEvent(TypedDict, total=True):
-    url: str
-    body: NotRequired[List[Dict[str, Any]]]
-    netError: NotRequired[int]
-    netErrorName: NotRequired[str]
-    httpStatusCode: NotRequired[int]

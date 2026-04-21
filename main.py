@@ -7,8 +7,8 @@ import os
 load_dotenv()
 
 llm = ChatOllama(model='qwen3.5:397b-cloud', temperature=0.5)
-config = BrowserConfig(browser='edge', headless=False)
-agent = Agent(config=config, llm=llm, use_vision=False, max_steps=100)
+config = BrowserConfig(browser='edge', headless=False,use_system_profile=True)
+agent = Agent(config=config, llm=llm, use_vision=False, max_steps=100,)
 
 user_query = input('Enter your query: ')
 agent.print_response(user_query)

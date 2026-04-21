@@ -106,18 +106,7 @@ class setStorageBucketTrackingParameters(TypedDict, total=True):
 class deleteStorageBucketParameters(TypedDict, total=True):
     bucket: StorageBucket
 
-class setAttributionReportingLocalTestingModeParameters(TypedDict, total=True):
-    enabled: bool
-    """If enabled, noise is suppressed and reports are sent immediately."""
-class setAttributionReportingTrackingParameters(TypedDict, total=True):
-    enable: bool
 
-
-class getAffectedUrlsForThirdPartyCookieMetadataParameters(TypedDict, total=True):
-    firstPartyUrl: str
-    """The URL of the page currently being visited."""
-    thirdPartyUrls: List[str]
-    """The list of embedded resource URLs from the page."""
 class setProtectedAudienceKAnonymityParameters(TypedDict, total=True):
     owner: str
     name: str
@@ -172,13 +161,5 @@ class getSharedStorageEntriesReturns(TypedDict):
 
 class runBounceTrackingMitigationsReturns(TypedDict):
     deletedSites: List[str]
-
-
-class sendPendingAttributionReportsReturns(TypedDict):
-    numSent: int
-    """The number of reports that were sent."""
 class getRelatedWebsiteSetsReturns(TypedDict):
     sets: List[RelatedWebsiteSet]
-class getAffectedUrlsForThirdPartyCookieMetadataReturns(TypedDict):
-    matchedUrls: List[str]
-    """Array of matching URLs. If there is a primary pattern match for the first- party URL, only the first-party URL is returned in the array."""

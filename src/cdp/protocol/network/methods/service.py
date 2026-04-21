@@ -350,6 +350,17 @@ class NetworkMethods:
     Dict[str, Any]: The result of the enableDeviceBoundSessions call.
         """
         return await self.client.send(method="Network.enableDeviceBoundSessions", params=params, session_id=session_id)
+    async def delete_device_bound_session(self, params: deleteDeviceBoundSessionParameters | None = None, session_id: str | None = None) -> Dict[str, Any]:
+        """
+    Deletes a device bound session.    
+        Args:
+            params (deleteDeviceBoundSessionParameters, optional): Parameters for the deleteDeviceBoundSession method.
+            session_id (str, optional): Target session ID for flat protocol usage.
+            
+        Returns:
+    Dict[str, Any]: The result of the deleteDeviceBoundSession call.
+        """
+        return await self.client.send(method="Network.deleteDeviceBoundSession", params=params, session_id=session_id)
     async def fetch_schemeful_site(self, params: fetchSchemefulSiteParameters | None = None, session_id: str | None = None) -> fetchSchemefulSiteReturns:
         """
     Fetches the schemeful site for a specific origin.    

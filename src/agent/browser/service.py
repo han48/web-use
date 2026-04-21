@@ -64,6 +64,9 @@ class Browser:
     def __init__(self, config: BrowserConfig = None):
         self.config = config if config else BrowserConfig()
 
+        if self.config.update_cdp:
+            self._update_cdp()
+
         self._process: subprocess.Popen | None = None
         self._client: Client | None = None
         self._resolved_attach_ws_url: str | None = None
@@ -105,6 +108,17 @@ class Browser:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
+
+    def _update_cdp(self):
+        from src.cdp.generator.service import CDPGenerator
+        try:
+            logger.info('Updating CDP protocol definitions...')
+            generator = CDPGenerator()
+            generator.generate()
+            logger.info('CDP protocol definitions updated successfully')
+        except Exception as e:
+            logger.error(f'Failed to update CDP: {e}')
+            raise
 
     def _on_browser_disconnected(self):
         self._client = None
@@ -857,6 +871,19 @@ class Browser:
             f'  return true;'
             f'}})()'
         )
+
+    async def get_element_by_index(self, index: int):
+        state = await self.get_state(use_vision=False)
+        interactive_count = len(state.dom_state.interactive_nodes)
+
+        if index < interactive_count:
+            return state.dom_state.interactive_nodes[index]
+
+        scrollable_index = index - interactive_count
+        if scrollable_index < len(state.dom_state.scrollable_nodes):
+            return state.dom_state.scrollable_nodes[scrollable_index]
+
+        raise IndexError(f'Element index {index} out of range (interactive: {interactive_count}, scrollable: {len(state.dom_state.scrollable_nodes)})')
 
     async def get_state(self, use_vision: bool = False) -> BrowserState:
         if self._state_watchdog is not None:

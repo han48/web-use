@@ -445,6 +445,8 @@ class CSSFunctionRule(TypedDict, total=True):
     """Function body."""
     styleSheetId: NotRequired[StyleSheetId]
     """The css style sheet identifier (absent for user agent stylesheet and user-specified stylesheet rules) this rule came from."""
+    originTreeScopeNodeId: NotRequired[BackendNodeId]
+    """The BackendNodeId of the DOM node that constitutes the origin tree scope of this rule."""
 class CSSKeyframeRule(TypedDict, total=True):
     """CSS keyframe rule representation."""
     origin: StyleSheetOrigin

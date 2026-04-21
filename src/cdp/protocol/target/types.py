@@ -20,12 +20,14 @@ class TargetInfo(TypedDict, total=True):
     """Whether the target has an attached client."""
     canAccessOpener: bool
     """Whether the target has access to the originating window."""
+    parentId: NotRequired[TargetID]
+    """Id of the parent target, if any. For example, "iframe" target may have a "page" parent."""
     openerId: NotRequired[TargetID]
     """Opener target Id"""
     openerFrameId: NotRequired[FrameId]
     """Frame id of originating window (is only set if target has an opener)."""
     parentFrameId: NotRequired[FrameId]
-    """Id of the parent frame, only present for the "iframe" targets."""
+    """Id of the parent frame, present for "iframe" and "worker" targets. For nested workers, this is the "ancestor" frame that created the first worker in the nested chain."""
     browserContextId: NotRequired[BrowserContextID]
     subtype: NotRequired[str]
     """Provides additional details for specific target types. For example, for the type of "page", this may be set to "prerender"."""

@@ -4,6 +4,7 @@ from typing import TypedDict, NotRequired, Required, Literal, Any, Dict, Union, 
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
+    from cdp.protocol.network.types import AdProvenance
     from cdp.protocol.page.types import FrameId
 
 NodeId = int
@@ -19,7 +20,7 @@ class BackendNode(TypedDict, total=True):
     nodeName: str
     """Node's nodeName."""
     backendNodeId: BackendNodeId
-PseudoType = Literal['first-line','first-letter','checkmark','before','after','picker-icon','interest-hint','marker','backdrop','column','selection','search-text','target-text','spelling-error','grammar-error','highlight','first-line-inherited','scroll-marker','scroll-marker-group','scroll-button','scrollbar','scrollbar-thumb','scrollbar-button','scrollbar-track','scrollbar-track-piece','scrollbar-corner','resizer','input-list-button','view-transition','view-transition-group','view-transition-image-pair','view-transition-group-children','view-transition-old','view-transition-new','placeholder','file-selector-button','details-content','picker','permission-icon','overscroll-area-parent']
+PseudoType = Literal['first-line','first-letter','checkmark','before','after','expand-icon','picker-icon','interest-hint','marker','backdrop','column','selection','search-text','target-text','spelling-error','grammar-error','highlight','first-line-inherited','scroll-marker','scroll-marker-group','scroll-button','scrollbar','scrollbar-thumb','scrollbar-button','scrollbar-track','scrollbar-track-piece','scrollbar-corner','resizer','input-list-button','view-transition','view-transition-group','view-transition-image-pair','view-transition-group-children','view-transition-old','view-transition-new','placeholder','file-selector-button','details-content','picker','permission-icon','overscroll-area-parent']
 """Pseudo element type."""
 ShadowRootType = Literal['user-agent','open','closed']
 """Shadow root type."""
@@ -94,7 +95,7 @@ class Node(TypedDict, total=True):
     isScrollable: NotRequired[bool]
     affectedByStartingStyles: NotRequired[bool]
     adoptedStyleSheets: NotRequired[List[StyleSheetId]]
-    isAdRelated: NotRequired[bool]
+    adProvenance: NotRequired[AdProvenance]
 class DetachedElementInfo(TypedDict, total=True):
     """A structure to hold the top-level node of a detached tree and an array of its retained descendants."""
     treeNode: Node

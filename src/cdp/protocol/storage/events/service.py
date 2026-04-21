@@ -108,35 +108,3 @@ class StorageEvents:
                 The callback receives (params: storageBucketDeletedEvent, session_id: str | None).
         """
         self.client.on('Storage.storageBucketDeleted', callback)
-    def on_attribution_reporting_source_registered(self, callback: Callable[[attributionReportingSourceRegisteredEvent, str | None], None] | None = None) -> None:
-        """
-    No description available for attributionReportingSourceRegistered.    
-        Args:
-            callback (callable, optional): Function called when the event is fired. 
-                The callback receives (params: attributionReportingSourceRegisteredEvent, session_id: str | None).
-        """
-        self.client.on('Storage.attributionReportingSourceRegistered', callback)
-    def on_attribution_reporting_trigger_registered(self, callback: Callable[[attributionReportingTriggerRegisteredEvent, str | None], None] | None = None) -> None:
-        """
-    No description available for attributionReportingTriggerRegistered.    
-        Args:
-            callback (callable, optional): Function called when the event is fired. 
-                The callback receives (params: attributionReportingTriggerRegisteredEvent, session_id: str | None).
-        """
-        self.client.on('Storage.attributionReportingTriggerRegistered', callback)
-    def on_attribution_reporting_report_sent(self, callback: Callable[[attributionReportingReportSentEvent, str | None], None] | None = None) -> None:
-        """
-    No description available for attributionReportingReportSent.    
-        Args:
-            callback (callable, optional): Function called when the event is fired. 
-                The callback receives (params: attributionReportingReportSentEvent, session_id: str | None).
-        """
-        self.client.on('Storage.attributionReportingReportSent', callback)
-    def on_attribution_reporting_verbose_debug_report_sent(self, callback: Callable[[attributionReportingVerboseDebugReportSentEvent, str | None], None] | None = None) -> None:
-        """
-    No description available for attributionReportingVerboseDebugReportSent.    
-        Args:
-            callback (callable, optional): Function called when the event is fired. 
-                The callback receives (params: attributionReportingVerboseDebugReportSentEvent, session_id: str | None).
-        """
-        self.client.on('Storage.attributionReportingVerboseDebugReportSent', callback)

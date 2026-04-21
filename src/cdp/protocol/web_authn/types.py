@@ -4,7 +4,7 @@ from typing import TypedDict, NotRequired, Required, Literal, Any, Dict, Union, 
 
 AuthenticatorId = str
 AuthenticatorProtocol = Literal['u2f','ctap2']
-Ctap2Version = Literal['ctap2_0','ctap2_1']
+Ctap2Version = Literal['ctap2_0','ctap2_1','ctap2_2']
 AuthenticatorTransport = Literal['usb','nfc','ble','cable','internal']
 class VirtualAuthenticatorOptions(TypedDict, total=True):
     protocol: AuthenticatorProtocol
@@ -23,6 +23,10 @@ class VirtualAuthenticatorOptions(TypedDict, total=True):
     """If set to true, the authenticator will support the minPinLength extension. https://fidoalliance.org/specs/fido-v2.1-ps-20210615/fido-client-to-authenticator-protocol-v2.1-ps-20210615.html#sctn-minpinlength-extension Defaults to false."""
     hasPrf: NotRequired[bool]
     """If set to true, the authenticator will support the prf extension. https://w3c.github.io/webauthn/#prf-extension Defaults to false."""
+    hasHmacSecret: NotRequired[bool]
+    """If set to true, the authenticator will support the hmac-secret extension. https://fidoalliance.org/specs/fido-v2.1-ps-20210615/fido-client-to-authenticator-protocol-v2.1-ps-20210615.html#sctn-hmac-secret-extension Defaults to false."""
+    hasHmacSecretMc: NotRequired[bool]
+    """If set to true, the authenticator will support the hmac-secret-mc extension. https://fidoalliance.org/specs/fido-v2.2-rd-20241003/fido-client-to-authenticator-protocol-v2.2-rd-20241003.html#sctn-hmac-secret-make-cred-extension Defaults to false."""
     automaticPresenceSimulation: NotRequired[bool]
     """If set to true, tests of user presence will succeed immediately. Otherwise, they will not be resolved. Defaults to true."""
     isUserVerified: NotRequired[bool]

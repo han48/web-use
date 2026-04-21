@@ -7,8 +7,6 @@ if TYPE_CHECKING:
     from cdp.protocol.network.types import LoaderId
     from cdp.protocol.network.types import ResourceType
     from cdp.protocol.network.types import TimeSinceEpoch
-    from cdp.protocol.runtime.types import ScriptId
-    from cdp.protocol.runtime.types import UniqueDebuggerId
 
 FrameId = str
 """Unique frame identifier."""
@@ -19,24 +17,12 @@ class AdFrameStatus(TypedDict, total=True):
     """Indicates whether a frame has been identified as an ad and why."""
     adFrameType: AdFrameType
     explanations: NotRequired[List[AdFrameExplanation]]
-class AdScriptId(TypedDict, total=True):
-    """Identifies the script which caused a script or frame to be labelled as an ad."""
-    scriptId: ScriptId
-    """Script Id of the script which caused a script or frame to be labelled as an ad."""
-    debuggerId: UniqueDebuggerId
-    """Id of scriptId's debugger."""
-class AdScriptAncestry(TypedDict, total=True):
-    """Encapsulates the script ancestry and the root script filterlist rule that caused the frame to be labelled as an ad. Only created when ancestryChain is not empty."""
-    ancestryChain: List[AdScriptId]
-    """A chain of AdScriptIds representing the ancestry of an ad script that led to the creation of a frame. The chain is ordered from the script itself (lower level) up to its root ancestor that was flagged by filterlist."""
-    rootScriptFilterlistRule: NotRequired[str]
-    """The filterlist rule that caused the root (last) script in ancestryChain to be ad-tagged. Only populated if the rule is available."""
 SecureContextType = Literal['Secure','SecureLocalhost','InsecureScheme','InsecureAncestor']
 """Indicates whether the frame is a secure context and why it is the case."""
 CrossOriginIsolatedContextType = Literal['Isolated','NotIsolated','NotIsolatedFeatureDisabled']
 """Indicates whether the frame is cross-origin isolated and why it is the case."""
 GatedAPIFeatures = Literal['SharedArrayBuffers','SharedArrayBuffersTransferAllowed','PerformanceMeasureMemory','PerformanceProfile']
-PermissionsPolicyFeature = Literal['accelerometer','all-screens-capture','ambient-light-sensor','aria-notify','attribution-reporting','autofill','autoplay','bluetooth','browsing-topics','camera','captured-surface-control','ch-dpr','ch-device-memory','ch-downlink','ch-ect','ch-prefers-color-scheme','ch-prefers-reduced-motion','ch-prefers-reduced-transparency','ch-rtt','ch-save-data','ch-ua','ch-ua-arch','ch-ua-bitness','ch-ua-high-entropy-values','ch-ua-platform','ch-ua-model','ch-ua-mobile','ch-ua-form-factors','ch-ua-full-version','ch-ua-full-version-list','ch-ua-platform-version','ch-ua-wow64','ch-viewport-height','ch-viewport-width','ch-width','clipboard-read','clipboard-write','compute-pressure','controlled-frame','cross-origin-isolated','deferred-fetch','deferred-fetch-minimal','device-attributes','digital-credentials-create','digital-credentials-get','direct-sockets','direct-sockets-multicast','direct-sockets-private','display-capture','document-domain','encrypted-media','execution-while-out-of-viewport','execution-while-not-rendered','fenced-unpartitioned-storage-read','focus-without-user-activation','fullscreen','frobulate','gamepad','geolocation','gyroscope','hid','identity-credentials-get','idle-detection','interest-cohort','join-ad-interest-group','keyboard-map','language-detector','language-model','local-fonts','local-network','local-network-access','loopback-network','magnetometer','manual-text','media-playback-while-not-visible','microphone','midi','on-device-speech-recognition','otp-credentials','payment','picture-in-picture','private-aggregation','private-state-token-issuance','private-state-token-redemption','publickey-credentials-create','publickey-credentials-get','record-ad-auction-events','rewriter','run-ad-auction','screen-wake-lock','serial','shared-storage','shared-storage-select-url','smart-card','speaker-selection','storage-access','sub-apps','summarizer','sync-xhr','translator','unload','usb','usb-unrestricted','vertical-scroll','web-app-installation','web-printing','web-share','window-management','writer','xr-spatial-tracking']
+PermissionsPolicyFeature = Literal['accelerometer','all-screens-capture','ambient-light-sensor','aria-notify','attribution-reporting','autofill','autoplay','bluetooth','browsing-topics','camera','captured-surface-control','ch-dpr','ch-device-memory','ch-downlink','ch-ect','ch-prefers-color-scheme','ch-prefers-reduced-motion','ch-prefers-reduced-transparency','ch-rtt','ch-save-data','ch-ua','ch-ua-arch','ch-ua-bitness','ch-ua-high-entropy-values','ch-ua-platform','ch-ua-model','ch-ua-mobile','ch-ua-form-factors','ch-ua-full-version','ch-ua-full-version-list','ch-ua-platform-version','ch-ua-wow64','ch-viewport-height','ch-viewport-width','ch-width','clipboard-read','clipboard-write','compute-pressure','controlled-frame','cross-origin-isolated','deferred-fetch','deferred-fetch-minimal','device-attributes','digital-credentials-create','digital-credentials-get','direct-sockets','direct-sockets-multicast','direct-sockets-private','display-capture','document-domain','encrypted-media','execution-while-out-of-viewport','execution-while-not-rendered','focus-without-user-activation','fullscreen','frobulate','gamepad','geolocation','gyroscope','hid','identity-credentials-get','idle-detection','interest-cohort','join-ad-interest-group','keyboard-map','language-detector','language-model','local-fonts','local-network','local-network-access','loopback-network','magnetometer','manual-text','media-playback-while-not-visible','microphone','midi','on-device-speech-recognition','otp-credentials','payment','picture-in-picture','private-aggregation','private-state-token-issuance','private-state-token-redemption','publickey-credentials-create','publickey-credentials-get','record-ad-auction-events','rewriter','run-ad-auction','screen-wake-lock','serial','shared-storage','shared-storage-select-url','smart-card','speaker-selection','storage-access','sub-apps','summarizer','sync-xhr','translator','unload','usb','usb-unrestricted','vertical-scroll','web-app-installation','web-printing','web-share','window-management','writer','xr-spatial-tracking']
 """All Permissions Policy features. This enum should match the one defined in services/network/public/cpp/permissions_policy/permissions_policy_features.json5. LINT.IfChange(PermissionsPolicyFeature)"""
 PermissionsPolicyBlockReason = Literal['Header','IframeAttribute','InFencedFrameTree','InIsolatedApp']
 """Reason for a permissions policy feature to be disabled."""

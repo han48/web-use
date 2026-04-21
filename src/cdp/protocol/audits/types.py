@@ -5,6 +5,7 @@ from typing import TypedDict, NotRequired, Required, Literal, Any, Dict, Union, 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from cdp.protocol.dom.types import BackendNodeId
+    from cdp.protocol.network.types import AdAncestry
     from cdp.protocol.network.types import ClientSecurityState
     from cdp.protocol.network.types import CorsErrorStatus
     from cdp.protocol.network.types import IPAddressSpace
@@ -13,7 +14,6 @@ if TYPE_CHECKING:
     from cdp.protocol.page.types import FrameId
     from cdp.protocol.runtime.types import ScriptId
     from cdp.protocol.runtime.types import StackTrace
-    from cdp.protocol.runtime.types import UniqueDebuggerId
 
 class AffectedCookie(TypedDict, total=True):
     """Information about a cookie that is affected by an inspector issue."""
@@ -157,7 +157,7 @@ class UnencodedDigestIssueDetails(TypedDict, total=True):
 class ConnectionAllowlistIssueDetails(TypedDict, total=True):
     error: ConnectionAllowlistError
     request: AffectedRequest
-GenericIssueErrorType = Literal['FormLabelForNameError','FormDuplicateIdForInputError','FormInputWithNoLabelError','FormAutocompleteAttributeEmptyError','FormEmptyIdAndNameAttributesForInputError','FormAriaLabelledByToNonExistingIdError','FormInputAssignedAutocompleteValueToIdOrNameAttributeError','FormLabelHasNeitherForNorNestedInputError','FormLabelForMatchesNonExistingIdError','FormInputHasWrongButWellIntendedAutocompleteValueError','ResponseWasBlockedByORB','NavigationEntryMarkedSkippable','AutofillAndManualTextPolicyControlledFeaturesInfo','AutofillPolicyControlledFeatureInfo','ManualTextPolicyControlledFeatureInfo','FormModelContextParameterMissingTitleAndDescription']
+GenericIssueErrorType = Literal['FormLabelForNameError','FormDuplicateIdForInputError','FormInputWithNoLabelError','FormAutocompleteAttributeEmptyError','FormEmptyIdAndNameAttributesForInputError','FormAriaLabelledByToNonExistingIdError','FormInputAssignedAutocompleteValueToIdOrNameAttributeError','FormLabelHasNeitherForNorNestedInputError','FormLabelForMatchesNonExistingIdError','FormInputHasWrongButWellIntendedAutocompleteValueError','ResponseWasBlockedByORB','NavigationEntryMarkedSkippable','AutofillAndManualTextPolicyControlledFeaturesInfo','AutofillPolicyControlledFeatureInfo','ManualTextPolicyControlledFeatureInfo','FormModelContextParameterMissingTitleAndDescription','FormModelContextMissingToolName','FormModelContextMissingToolDescription','FormModelContextRequiredParameterMissingName','FormModelContextParameterMissingName']
 class GenericIssueDetails(TypedDict, total=True):
     """Depending on the concrete errorType, different properties are set."""
     errorType: GenericIssueErrorType
@@ -256,20 +256,6 @@ class PermissionElementIssueDetails(TypedDict, total=True):
     """Used for messages about occluder's parent"""
     disableReason: NotRequired[str]
     """Used for messages about activation disabled reason"""
-class AdScriptIdentifier(TypedDict, total=True):
-    """Metadata about the ad script that was on the stack that caused the current script in the AdAncestry to be considered ad related."""
-    scriptId: ScriptId
-    """The script's v8 identifier."""
-    debuggerId: UniqueDebuggerId
-    """v8's debugging id for the v8::Context."""
-    name: str
-    """The script's url (or generated name based on id if inline script)."""
-class AdAncestry(TypedDict, total=True):
-    """Providence about how an ad script was determined to be such. It is an ad because its url matched a filterlist rule, or because some other ad script was on the stack when this script was loaded."""
-    adAncestryChain: List[AdScriptIdentifier]
-    """The ad-script in the stack when the offending script was loaded. This is recursive down to the root script that was tagged due to the filterlist rule."""
-    rootScriptFilterlistRule: NotRequired[str]
-    """The filterlist rule that caused the root (last) script in adAncestry to be ad-tagged."""
 class SelectivePermissionsInterventionIssueDetails(TypedDict, total=True):
     """The issue warns about blocked calls to privacy sensitive APIs via the Selective Permissions Intervention."""
     apiName: str

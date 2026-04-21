@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from cdp.protocol.network.types import CookiePriority
     from cdp.protocol.network.types import CookieSameSite
     from cdp.protocol.network.types import CookieSourceScheme
+    from cdp.protocol.network.types import DeviceBoundSessionKey
     from cdp.protocol.network.types import Headers
     from cdp.protocol.network.types import InterceptionId
     from cdp.protocol.network.types import LoadNetworkResourceOptions
@@ -45,10 +46,12 @@ class deleteCookiesParameters(TypedDict, total=True):
     """If specified, deletes only cookies with the the given name and partitionKey where all partition key attributes match the cookie partition key attribute."""
 
 class emulateNetworkConditionsByRuleParameters(TypedDict, total=True):
-    offline: bool
-    """True to emulate internet disconnection."""
     matchedNetworkConditions: List[NetworkConditions]
     """Configure conditions for matching requests. If multiple entries match a request, the first entry wins.  Global conditions can be configured by leaving the urlPattern for the conditions empty. These global conditions are also applied for throttling of p2p connections."""
+    offline: NotRequired[bool]
+    """True to emulate internet disconnection. Deprecated, use the offline property in matchedNetworkConditions or emulateOfflineServiceWorker instead."""
+    emulateOfflineServiceWorker: NotRequired[bool]
+    """True to emulate offline service worker."""
 class overrideNetworkStateParameters(TypedDict, total=True):
     offline: bool
     """True to emulate internet disconnection."""
@@ -173,6 +176,8 @@ class enableReportingApiParameters(TypedDict, total=True):
 class enableDeviceBoundSessionsParameters(TypedDict, total=True):
     enable: bool
     """Whether to enable or disable events."""
+class deleteDeviceBoundSessionParameters(TypedDict, total=True):
+    key: DeviceBoundSessionKey
 class fetchSchemefulSiteParameters(TypedDict, total=True):
     origin: str
     """The URL origin."""
@@ -186,10 +191,6 @@ class loadNetworkResourceParameters(TypedDict, total=True):
 class setCookieControlsParameters(TypedDict, total=True):
     enableThirdPartyCookieRestriction: bool
     """Whether 3pc restriction is enabled."""
-    disableThirdPartyCookieMetadata: bool
-    """Whether 3pc grace period exception should be enabled; false by default."""
-    disableThirdPartyCookieHeuristics: bool
-    """Whether 3pc heuristics exceptions should be enabled; false by default."""
 
 
 
@@ -243,6 +244,7 @@ class streamResourceContentReturns(TypedDict):
     """Data that has been buffered until streaming is enabled. (Encoded as a base64 string when passed over JSON)"""
 class getSecurityIsolationStatusReturns(TypedDict):
     status: SecurityIsolationStatus
+
 
 
 class fetchSchemefulSiteReturns(TypedDict):

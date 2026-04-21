@@ -7,8 +7,8 @@ if TYPE_CHECKING:
     from cdp.protocol.debugger.types import SearchMatch
     from cdp.protocol.dom.types import Rect
     from cdp.protocol.io.types import StreamHandle
+    from cdp.protocol.network.types import AdAncestry
     from cdp.protocol.network.types import LoaderId
-    from cdp.protocol.page.types import AdScriptAncestry
     from cdp.protocol.page.types import AppManifestError
     from cdp.protocol.page.types import AppManifestParsedProperties
     from cdp.protocol.page.types import CompilationCacheParams
@@ -262,7 +262,7 @@ class getAppIdReturns(TypedDict):
     recommendedId: str
     """Recommendation for manifest's id attribute to match current id computed from start_url"""
 class getAdScriptAncestryReturns(TypedDict):
-    adScriptAncestry: AdScriptAncestry
+    adScriptAncestry: AdAncestry
     """The ancestry chain of ad script identifiers leading to this frame's creation, along with the root script's filterlist rule. The ancestry chain is ordered from the most immediate script (in the frame creation stack) to more distant ancestors (that created the immediately preceding script). Only sent if frame is labelled as an ad and ids are available."""
 class getFrameTreeReturns(TypedDict):
     frameTree: FrameTree

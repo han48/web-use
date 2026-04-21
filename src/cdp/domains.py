@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from .protocol.css.service import CSS
     from .protocol.cache_storage.service import CacheStorage
     from .protocol.cast.service import Cast
+    from .protocol.crash_report_context.service import CrashReportContext
     from .protocol.dom.service import DOM
     from .protocol.dom_debugger.service import DOMDebugger
     from .protocol.dom_snapshot.service import DOMSnapshot
@@ -51,6 +52,7 @@ if TYPE_CHECKING:
     from .protocol.tracing.service import Tracing
     from .protocol.web_audio.service import WebAudio
     from .protocol.web_authn.service import WebAuthn
+    from .protocol.web_mcp.service import WebMCP
     from .protocol.debugger.service import Debugger
     from .protocol.heap_profiler.service import HeapProfiler
     from .protocol.profiler.service import Profiler
@@ -81,6 +83,7 @@ class Domains:
         self._css: Optional['CSS'] = None
         self._cache_storage: Optional['CacheStorage'] = None
         self._cast: Optional['Cast'] = None
+        self._crash_report_context: Optional['CrashReportContext'] = None
         self._dom: Optional['DOM'] = None
         self._dom_debugger: Optional['DOMDebugger'] = None
         self._dom_snapshot: Optional['DOMSnapshot'] = None
@@ -119,6 +122,7 @@ class Domains:
         self._tracing: Optional['Tracing'] = None
         self._web_audio: Optional['WebAudio'] = None
         self._web_authn: Optional['WebAuthn'] = None
+        self._web_mcp: Optional['WebMCP'] = None
         self._debugger: Optional['Debugger'] = None
         self._heap_profiler: Optional['HeapProfiler'] = None
         self._profiler: Optional['Profiler'] = None
@@ -213,6 +217,15 @@ A domain for interacting with Cast, Presentation API, and Remote Playback API fu
             from .protocol.cast.service import Cast
             self._cast = Cast(client=self.client)
         return self._cast
+
+    @property
+    def crash_report_context(self) -> 'CrashReportContext':
+        """
+This domain exposes the current state of the CrashReportContext API.        """
+        if self._crash_report_context is None:
+            from .protocol.crash_report_context.service import CrashReportContext
+            self._crash_report_context = CrashReportContext(client=self.client)
+        return self._crash_report_context
 
     @property
     def dom(self) -> 'DOM':
@@ -555,6 +568,15 @@ This domain allows configuring virtual authenticators to test the WebAuthn API. 
             from .protocol.web_authn.service import WebAuthn
             self._web_authn = WebAuthn(client=self.client)
         return self._web_authn
+
+    @property
+    def web_mcp(self) -> 'WebMCP':
+        """
+Access the WebMCP domain.        """
+        if self._web_mcp is None:
+            from .protocol.web_mcp.service import WebMCP
+            self._web_mcp = WebMCP(client=self.client)
+        return self._web_mcp
 
     @property
     def debugger(self) -> 'Debugger':

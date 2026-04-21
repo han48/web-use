@@ -361,39 +361,6 @@ class StorageMethods:
     runBounceTrackingMitigationsReturns: The result of the runBounceTrackingMitigations call.
         """
         return await self.client.send(method="Storage.runBounceTrackingMitigations", params=params, session_id=session_id)
-    async def set_attribution_reporting_local_testing_mode(self, params: setAttributionReportingLocalTestingModeParameters | None = None, session_id: str | None = None) -> Dict[str, Any]:
-        """
-    https://wicg.github.io/attribution-reporting-api/    
-        Args:
-            params (setAttributionReportingLocalTestingModeParameters, optional): Parameters for the setAttributionReportingLocalTestingMode method.
-            session_id (str, optional): Target session ID for flat protocol usage.
-            
-        Returns:
-    Dict[str, Any]: The result of the setAttributionReportingLocalTestingMode call.
-        """
-        return await self.client.send(method="Storage.setAttributionReportingLocalTestingMode", params=params, session_id=session_id)
-    async def set_attribution_reporting_tracking(self, params: setAttributionReportingTrackingParameters | None = None, session_id: str | None = None) -> Dict[str, Any]:
-        """
-    Enables/disables issuing of Attribution Reporting events.    
-        Args:
-            params (setAttributionReportingTrackingParameters, optional): Parameters for the setAttributionReportingTracking method.
-            session_id (str, optional): Target session ID for flat protocol usage.
-            
-        Returns:
-    Dict[str, Any]: The result of the setAttributionReportingTracking call.
-        """
-        return await self.client.send(method="Storage.setAttributionReportingTracking", params=params, session_id=session_id)
-    async def send_pending_attribution_reports(self, params: sendPendingAttributionReportsParameters | None = None, session_id: str | None = None) -> sendPendingAttributionReportsReturns:
-        """
-    Sends all pending Attribution Reports immediately, regardless of their scheduled report time.    
-        Args:
-            params (sendPendingAttributionReportsParameters, optional): Parameters for the sendPendingAttributionReports method.
-            session_id (str, optional): Target session ID for flat protocol usage.
-            
-        Returns:
-    sendPendingAttributionReportsReturns: The result of the sendPendingAttributionReports call.
-        """
-        return await self.client.send(method="Storage.sendPendingAttributionReports", params=params, session_id=session_id)
     async def get_related_website_sets(self, params: getRelatedWebsiteSetsParameters | None = None, session_id: str | None = None) -> getRelatedWebsiteSetsReturns:
         """
     Returns the effective Related Website Sets in use by this profile for the browser session. The effective Related Website Sets will not change during a browser session.    
@@ -405,17 +372,6 @@ class StorageMethods:
     getRelatedWebsiteSetsReturns: The result of the getRelatedWebsiteSets call.
         """
         return await self.client.send(method="Storage.getRelatedWebsiteSets", params=params, session_id=session_id)
-    async def get_affected_urls_for_third_party_cookie_metadata(self, params: getAffectedUrlsForThirdPartyCookieMetadataParameters | None = None, session_id: str | None = None) -> getAffectedUrlsForThirdPartyCookieMetadataReturns:
-        """
-    Returns the list of URLs from a page and its embedded resources that match existing grace period URL pattern rules. https://developers.google.com/privacy-sandbox/cookies/temporary-exceptions/grace-period    
-        Args:
-            params (getAffectedUrlsForThirdPartyCookieMetadataParameters, optional): Parameters for the getAffectedUrlsForThirdPartyCookieMetadata method.
-            session_id (str, optional): Target session ID for flat protocol usage.
-            
-        Returns:
-    getAffectedUrlsForThirdPartyCookieMetadataReturns: The result of the getAffectedUrlsForThirdPartyCookieMetadata call.
-        """
-        return await self.client.send(method="Storage.getAffectedUrlsForThirdPartyCookieMetadata", params=params, session_id=session_id)
     async def set_protected_audience_k_anonymity(self, params: setProtectedAudienceKAnonymityParameters | None = None, session_id: str | None = None) -> Dict[str, Any]:
         """
     No description available for setProtectedAudienceKAnonymity.    

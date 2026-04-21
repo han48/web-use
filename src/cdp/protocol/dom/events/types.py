@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from cdp.protocol.dom.types import Node
     from cdp.protocol.dom.types import NodeId
     from cdp.protocol.dom.types import StyleSheetId
+    from cdp.protocol.network.types import AdProvenance
 
 class attributeModifiedEvent(TypedDict, total=True):
     nodeId: NodeId
@@ -73,8 +74,8 @@ class scrollableFlagUpdatedEvent(TypedDict, total=True):
 class adRelatedStateUpdatedEvent(TypedDict, total=True):
     nodeId: NodeId
     """The id of the node."""
-    isAdRelated: bool
-    """If the node is ad related."""
+    adProvenance: NotRequired[AdProvenance]
+    """The provenance of the ad related node, if it is ad related."""
 class affectedByStartingStylesFlagUpdatedEvent(TypedDict, total=True):
     nodeId: NodeId
     """The id of the node."""

@@ -5,7 +5,9 @@ from typing import TypedDict, NotRequired, Required, Literal, Any, Dict, Union, 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from cdp.protocol.io.types import StreamHandle
+    from cdp.protocol.runtime.types import ScriptId
     from cdp.protocol.runtime.types import StackTrace
+    from cdp.protocol.runtime.types import UniqueDebuggerId
     from cdp.protocol.security.types import CertificateId
     from cdp.protocol.security.types import MixedContentType
     from cdp.protocol.security.types import SecurityState
@@ -493,6 +495,8 @@ class NetworkConditions(TypedDict, total=True):
     """WebRTC packet queue length (packet). 0 removes any queue length limitations."""
     packetReordering: NotRequired[bool]
     """WebRTC packetReordering feature."""
+    offline: NotRequired[bool]
+    """True to emulate internet disconnection."""
 class BlockPattern(TypedDict, total=True):
     urlPattern: str
     """URL pattern to match. Patterns use the URLPattern constructor string syntax (https://urlpattern.spec.whatwg.org/) and must be absolute. Example: *://*:*/*.css."""
@@ -540,6 +544,26 @@ class ClientSecurityState(TypedDict, total=True):
     initiatorIsSecureContext: bool
     initiatorIPAddressSpace: IPAddressSpace
     localNetworkAccessRequestPolicy: LocalNetworkAccessRequestPolicy
+class AdScriptIdentifier(TypedDict, total=True):
+    """Identifies the script on the stack that caused a resource or element to be labeled as an ad. For resources, this indicates the context that triggered the fetch. For elements, this indicates the context that caused the element to be appended to the DOM."""
+    scriptId: ScriptId
+    """The script's V8 identifier."""
+    debuggerId: UniqueDebuggerId
+    """V8's debugging ID for the v8::Context."""
+    name: str
+    """The script's url (or generated name based on id if inline script)."""
+class AdAncestry(TypedDict, total=True):
+    """Encapsulates the script ancestry and the root script filter list rule that caused the resource or element to be labeled as an ad."""
+    ancestryChain: List[AdScriptIdentifier]
+    """A chain of AdScriptIdentifiers representing the ancestry of an ad script that led to the creation of a resource or element. The chain is ordered from the script itself (lowest level) up to its root ancestor that was flagged by a filter list."""
+    rootScriptFilterlistRule: NotRequired[str]
+    """The filter list rule that caused the root (last) script in ancestryChain to be tagged as an ad."""
+class AdProvenance(TypedDict, total=False):
+    """Represents the provenance of an ad resource or element. Only one of filterlistRule or adScriptAncestry can be set. If filterlistRule is provided, the resource URL directly matches a filter list rule. If adScriptAncestry is provided, an ad script initiated the resource fetch or appended the element to the DOM. If neither is provided, the entity is known to be an ad, but provenance tracking information is unavailable."""
+    filterlistRule: NotRequired[str]
+    """The filterlist rule that matched, if any."""
+    adScriptAncestry: NotRequired[AdAncestry]
+    """The script ancestry that created the ad, if any."""
 CrossOriginOpenerPolicyValue = Literal['SameOrigin','SameOriginAllowPopups','RestrictProperties','UnsafeNone','SameOriginPlusCoep','RestrictPropertiesPlusCoep','NoopenerAllowPopups']
 class CrossOriginOpenerPolicyStatus(TypedDict, total=True):
     value: CrossOriginOpenerPolicyValue
@@ -668,7 +692,7 @@ class CreationEventDetails(TypedDict, total=True):
     """Details about a failed device bound session network request if there was one."""
 class RefreshEventDetails(TypedDict, total=True):
     """Session event details specific to refresh."""
-    refreshResult: Literal["Refreshed", "InitializedService", "Unreachable", "ServerError", "RefreshQuotaExceeded", "FatalError", "SigningQuotaExceeded"]
+    refreshResult: Literal["Refreshed", "RefreshedAsWaiter", "InitializedService", "Unreachable", "ServerError", "RefreshQuotaExceeded", "FatalError", "SigningQuotaExceeded"]
     """The result of a refresh."""
     wasFullyProactiveRefresh: bool
     """See comments on net::device_bound_sessions::RefreshEventResult::was_fully_proactive_refresh."""
@@ -680,7 +704,7 @@ class RefreshEventDetails(TypedDict, total=True):
     """Details about a failed device bound session network request if there was one."""
 class TerminationEventDetails(TypedDict, total=True):
     """Session event details specific to termination."""
-    deletionReason: Literal["Expired", "FailedToRestoreKey", "FailedToUnwrapKey", "StoragePartitionCleared", "ClearBrowsingData", "ServerRequested", "InvalidSessionParams", "RefreshFatalError"]
+    deletionReason: Literal["Expired", "FailedToRestoreKey", "FailedToUnwrapKey", "StoragePartitionCleared", "ClearBrowsingData", "ServerRequested", "InvalidSessionParams", "RefreshFatalError", "DevTools"]
     """The reason for a session being deleted."""
 class ChallengeEventDetails(TypedDict, total=True):
     """Session event details specific to challenges."""

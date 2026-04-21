@@ -29,6 +29,8 @@ dependencies = [
     "websockets>=15.0.1",
     "pyotp>=2.9.0",
     "platformdirs>=4.9.4",
+    "jinja2-strcase>=0.0.2",
+    "inflection>=0.5.1",
 ]
 
 [project.optional-dependencies]
