@@ -44,11 +44,8 @@ class Context:
     async def state(self, query: str, step: int, max_steps: int,
                     tool_result: str = 'No previous action.',
                     use_vision: bool = False,
-                    nudge: str = '',
-                    web_mcp_tools: list = None) -> HumanMessage | ImageMessage:
+                    nudge: str = '') -> HumanMessage | ImageMessage:
         browser_state = await self.session.get_state(use_vision=use_vision)
-
-        web_mcp_tools_str = self._format_web_mcp_tools(web_mcp_tools) if web_mcp_tools else 'None available'
 
         template = _load_template('state.md')
         content = template.format(**{
@@ -59,7 +56,6 @@ class Context:
             'interactive_elements': browser_state.dom_state.interactive_elements_to_string(),
             'scrollable_elements':  browser_state.dom_state.scrollable_elements_to_string(),
             'informative_elements': browser_state.dom_state.informative_elements_to_string(),
-            'web_mcp_tools':        web_mcp_tools_str,
             'tool_result':          tool_result,
             'query':                query,
         })
@@ -72,36 +68,3 @@ class Context:
 
     def task(self, task: str) -> HumanMessage:
         return HumanMessage(content=f'TASK: {task}')
-
-    @staticmethod
-    def _format_web_mcp_tools(tools: list) -> str:
-        """Format WebMCP tools for display in the browser state."""
-        if not tools:
-            return 'None available'
-
-        lines = ['**Available WebMCP Tools (specific to this website):**']
-        for tool in tools:
-            tool_name = tool.name
-            description = tool.description or 'No description'
-
-            try:
-                schema = tool.json_schema
-                params = schema.get('parameters', {})
-                props = params.get('properties', {})
-                required = params.get('required', [])
-
-                param_strs = []
-                for param_name, param_schema in props.items():
-                    param_type = param_schema.get('type', 'unknown')
-                    is_required = '✓' if param_name in required else '○'
-                    param_strs.append(f'  - `{param_name}` ({param_type}) [{is_required}]')
-
-                lines.append(f'**{tool_name}** — {description}')
-                if param_strs:
-                    lines.extend(param_strs)
-                else:
-                    lines.append('  - (no parameters)')
-            except Exception:
-                lines.append(f'**{tool_name}** — {description}')
-
-        return '\n'.join(lines)

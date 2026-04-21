@@ -115,6 +115,7 @@ BROWSER_ARGS = [
     '--no-startup-window',
     '--window-position=0,0',
     '--disable-sync',
+    '--enable-features=WebMCPTesting',
 ]
 
 IGNORE_DEFAULT_ARGS = ['--enable-automation']

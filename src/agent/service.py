@@ -33,7 +33,6 @@ class Agent(BaseAgent):
         max_steps: int = 25,
         max_consecutive_failures: int = 3,
         use_vision: bool = False,
-        use_web_mcp: bool = False,
         include_human_in_loop: bool = False,
         log_to_file: bool = False,
         log_to_console: bool = True,
@@ -52,13 +51,11 @@ class Agent(BaseAgent):
         )
         self.instructions = instructions
         self.use_vision = use_vision
-        self.use_web_mcp = use_web_mcp
         self.llm = llm
         self.sensitive_data = sensitive_data
         self.keep_alive = keep_alive
         self._cached_system_message = None
         self._loop_guard = LoopGuard()
-        self._web_mcp_tools: dict = {}
 
         self.event = Event()
         if event_subscriber is not None:
@@ -80,98 +77,6 @@ class Agent(BaseAgent):
     @property
     def tools(self):
         return self.registry.get_tools()
-
-    async def _enable_web_mcp(self):
-        """Enable WebMCP domain in the CDP client."""
-        try:
-            client = await self.browser.get_cdp_client()
-            session_id = self.browser._get_current_session_id()
-            if session_id:
-                await client.send('WebMCP.enable', {}, session_id=session_id)
-                import logging
-                logging.getLogger(__name__).info('WebMCP domain enabled')
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).warning(f'Failed to enable WebMCP: {e}')
-
-    def _setup_web_mcp_listeners(self):
-        """Setup listeners for WebMCP events when navigating."""
-        if not self.use_web_mcp:
-            return
-
-        async def on_tools_added(event, session_id=None):
-            tools = event.get('tools', [])
-            for tool_def in tools:
-                await self._register_web_mcp_tool(tool_def)
-
-        self.browser.on('WebMCP.toolsAdded', on_tools_added)
-
-    async def _register_web_mcp_tool(self, tool_def: dict):
-        """Dynamically register a WebMCP tool discovered from a website."""
-        tool_name = tool_def.get('name', '')
-        frame_id = tool_def.get('frameId', '')
-        description = tool_def.get('description', f'WebMCP tool: {tool_name}')
-        input_schema = tool_def.get('inputSchema', {})
-
-        if not tool_name or tool_name in self._web_mcp_tools:
-            return
-
-        from pydantic import create_model, Field
-        from typing import Optional
-
-        properties = input_schema.get('properties', {})
-        required = input_schema.get('required', [])
-
-        field_definitions = {}
-        for prop_name, prop_schema in properties.items():
-            prop_type = self._get_python_type(prop_schema.get('type', 'string'))
-            is_required = prop_name in required
-            field_def = (prop_type, ...) if is_required else (Optional[prop_type], None)
-            field_definitions[prop_name] = field_def
-
-        if field_definitions:
-            model = create_model(f'{tool_name}_model', **field_definitions)
-        else:
-            from pydantic import BaseModel
-            model = BaseModel
-
-        async def web_mcp_tool_fn(**kwargs):
-            try:
-                client = await self.browser.get_cdp_client()
-                result = await client.send(
-                    'WebMCP.invokeTool',
-                    {
-                        'frameId': frame_id,
-                        'toolName': tool_name,
-                        'input': kwargs,
-                    }
-                )
-                return f'WebMCP tool result: {result}'
-            except Exception as e:
-                return f'WebMCP tool error: {str(e)}'
-
-        tool = Tool(name=f'web_mcp_{tool_name}', description=description, model=model)
-        tool.function = web_mcp_tool_fn
-
-        self.registry.tools.append(tool)
-        self.registry.tools_registry[tool.name] = tool
-        self._web_mcp_tools[tool_name] = tool
-
-        import logging
-        logging.getLogger(__name__).info(f'Registered WebMCP tool: {tool_name}')
-
-    @staticmethod
-    def _get_python_type(json_type: str):
-        """Convert JSON schema type to Python type."""
-        type_map = {
-            'string': str,
-            'number': float,
-            'integer': int,
-            'boolean': bool,
-            'array': list,
-            'object': dict,
-        }
-        return type_map.get(json_type, str)
 
     def _scrub_sensitive(self, text: str) -> str:
         """Replace any real credential values in text with their placeholder names."""
@@ -208,10 +113,6 @@ class Agent(BaseAgent):
         return resolved
 
     async def aloop(self) -> AgentResult:
-        if self.use_web_mcp:
-            await self._enable_web_mcp()
-            self._setup_web_mcp_listeners()
-
         self.state.messages.insert(0, self.system_message)
         self.state.messages.append(self.context.task(self.state.task))
         consecutive_failures = 0
@@ -227,7 +128,6 @@ class Agent(BaseAgent):
                 return AgentResult(is_done=False, error=error)
 
             nudge = self._loop_guard.check()
-            web_mcp_tools_list = list(self._web_mcp_tools.values()) if self._web_mcp_tools else None
             state_msg = await self.context.state(
                 query=self.state.task,
                 step=step,
@@ -235,7 +135,6 @@ class Agent(BaseAgent):
                 tool_result=tool_result,
                 use_vision=self.use_vision,
                 nudge=nudge or '',
-                web_mcp_tools=web_mcp_tools_list,
             )
             if nudge:
                 self.event.emit(AgentEvent(type=EventType.ERROR, data={'step': step, 'error': f'Loop detected: {nudge}'}))
