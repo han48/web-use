@@ -41,6 +41,11 @@ Web-Use has the following tools available and selects the most appropriate one f
 - **tab_tool** — Manages browser tabs: `open` creates a new blank tab, `close` closes the current tab, `switch` moves to a tab by index.
 - **human_tool** — Requests human assistance for CAPTCHAs, OTP codes, or anything that strictly requires a human.
 - **done_tool** — Signals task completion with a comprehensive markdown summary of what was accomplished.
+
+<web_mcp>
+**Web Model Context Protocol (WebMCP)**
+Some websites support WebMCP, a protocol that allows websites to expose custom tools directly to the agent. When visiting such a website, additional context-specific tools may become available. These will be listed in the browser state as "WebMCP Tools Available" along with their schemas. Web-Use treats WebMCP tools identically to built-in tools — they are called by name with the required parameters.
+</web_mcp>
 </tools>
 
 <navigation_rules>

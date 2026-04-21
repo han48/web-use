@@ -227,6 +227,7 @@ class Agent(BaseAgent):
                 return AgentResult(is_done=False, error=error)
 
             nudge = self._loop_guard.check()
+            web_mcp_tools_list = list(self._web_mcp_tools.values()) if self._web_mcp_tools else None
             state_msg = await self.context.state(
                 query=self.state.task,
                 step=step,
@@ -234,6 +235,7 @@ class Agent(BaseAgent):
                 tool_result=tool_result,
                 use_vision=self.use_vision,
                 nudge=nudge or '',
+                web_mcp_tools=web_mcp_tools_list,
             )
             if nudge:
                 self.event.emit(AgentEvent(type=EventType.ERROR, data={'step': step, 'error': f'Loop detected: {nudge}'}))
