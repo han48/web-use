@@ -22,6 +22,49 @@
 
 **Web-Use** is an intelligent autonomous browsing agent, built to seamlessly navigate websites, interact with dynamic content, perform smart searches, download files, and adapt to ever-changing pages — all with minimal effort from you. Powered by advanced LLMs and the Chrome DevTools Protocol, it transforms complex web tasks into streamlined, automated workflows that boost productivity and save time.
 
+## ✨Key Features
+
+- **🤖 Autonomous Web Navigation** — Navigate websites, fill forms, and interact with dynamic content without manual intervention
+- **🛠️ Multi-LLM Support** — Works with Anthropic Claude, Google Gemini, OpenAI, Groq, Ollama, Cerebras, Mistral, and more
+- **📸 Vision Capability** — Understands visual content on pages for better decision-making
+- **🔗 Web Model Context Protocol (WebMCP)** — Discovers and uses custom tools exposed by websites, enabling context-aware interactions
+- **⚡ Efficient Element Interaction** — Indexed DOM elements for fast, accurate clicking and typing
+- **📥 File Operations** — Download files and upload content to forms
+- **🔄 State Awareness** — Maintains understanding of page state to avoid loops and recover from errors
+- **⏱️ Intelligent Waiting** — Handles loading states, animations, and user interactions (CAPTCHA, OTP)
+
+## 🌐 Web Model Context Protocol (WebMCP)
+
+Web-Use supports **WebMCP**, a protocol that allows websites to expose custom tools and capabilities directly to the agent. When visiting a website with WebMCP support:
+
+- **Auto-Discovery** — The agent automatically detects available tools
+- **Dynamic Registration** — Tools are added to the agent's toolkit on-the-fly
+- **Full Integration** — WebMCP tools appear in the browser state with complete schema information
+- **Seamless Execution** — Tools are called like built-in tools with proper parameter validation
+
+### Example
+
+If you visit a documentation site that supports WebMCP with a `search_docs` tool:
+
+```
+**WebMCP Tools Available:**
+**search_docs** — Search documentation
+  - `query` (string) [✓ required]
+  - `limit` (integer) [○ optional]
+```
+
+The agent will automatically use this tool when relevant to the task.
+
+Enable WebMCP support:
+```python
+agent = Agent(
+    config=config,
+    llm=llm,
+    use_web_mcp=True,  # Enable WebMCP discovery
+    max_steps=100
+)
+```
+
 ## 🛠️Installation Guide
 
 ### **Prerequisites**
@@ -58,30 +101,74 @@ chrome --remote-debugging-port=9222
 GOOGLE_API_KEY="<API_KEY_HERE>"
 ```
 
-Basic setup of the agent.
+**Basic Setup:**
 
 ```python
-from src.inference.gemini import ChatGemini
-from src.agent.web import Agent
+from src.agent.browser.config import BrowserConfig
+from src.providers.ollama import ChatOllama
+from src.agent import Agent
 from dotenv import load_dotenv
-import os
 
 load_dotenv()
-google_api_key=os.getenv('GOOGLE_API_KEY')
 
-llm=ChatGemini(model='gemini-2.0-flash',api_key=google_api_key,temperature=0)
-agent=Agent(llm=llm,verbose=True,use_vision=False)
+# Initialize LLM
+llm = ChatOllama(model='qwen3.5:397b-cloud', temperature=0.5)
 
-user_query=input('Enter your query: ')
-agent_response=agent.invoke(user_query)
-print(agent_response.get('output'))
+# Configure browser
+config = BrowserConfig(
+    browser='chrome',
+    headless=False,
+    use_system_profile=True
+)
 
+# Create agent with WebMCP support
+agent = Agent(
+    config=config,
+    llm=llm,
+    use_vision=False,
+    use_web_mcp=True,  # Enable WebMCP for website tools
+    max_steps=100
+)
+
+# Run agent
+user_query = input('Enter your query: ')
+agent.print_response(user_query)
 ```
 
-Execute the following command to start the agent:
+**Execute:**
 
 ```bash
-python app.py
+uv run main.py
+```
+
+## ⚙️Configuration Options
+
+### Agent Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `config` | BrowserConfig | Required | Browser configuration (headless, profile, etc.) |
+| `llm` | BaseChatLLM | Required | Language model to use for reasoning |
+| `use_vision` | bool | False | Enable screenshot-based visual understanding |
+| `use_web_mcp` | bool | False | **NEW:** Enable Web Model Context Protocol to discover website tools |
+| `max_steps` | int | 25 | Maximum number of actions before timeout |
+| `max_consecutive_failures` | int | 3 | Retry limit for failed tool calls |
+| `include_human_in_loop` | bool | False | Allow pausing for human input |
+| `keep_alive` | bool | False | Keep browser open after task completion |
+
+### Browser Configuration
+
+```python
+config = BrowserConfig(
+    browser='chrome',              # 'chrome' or 'edge'
+    headless=False,                # Run in headless mode
+    use_system_profile=True,       # Use real browser profile with auth
+    user_data_dir='/path/to/profile',  # Custom profile directory
+    cdp_port=9222,                 # Chrome DevTools Protocol port
+    downloads_dir='/Downloads',    # Where to save files
+    attach_to_existing=False,      # Connect to running browser
+    update_cdp=False,              # Regenerate CDP protocol files
+)
 ```
 
 ## 🎥Demos
