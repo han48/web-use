@@ -1,4 +1,5 @@
 from src.messages import SystemMessage, HumanMessage, ImageMessage
+import httpx
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -47,6 +48,25 @@ class Context:
                     nudge: str = '') -> HumanMessage | ImageMessage:
         browser_state = await self.session.get_state(use_vision=use_vision)
 
+        # PDF detection
+        tab = browser_state.current_tab
+        url = tab.url if tab else ''
+        is_pdf = url.lower().endswith('.pdf')
+        if not is_pdf and url.startswith('http'):
+            try:
+                async with httpx.AsyncClient(follow_redirects=True, timeout=3.0) as client:
+                    head = await client.head(url)
+                is_pdf = 'pdf' in head.headers.get('content-type', '').lower()
+            except Exception:
+                try:
+                    ct = await self.session.execute_script(
+                        "(function(){try{return document.contentType}catch(e){return ''}})()"
+                    )
+                    is_pdf = 'pdf' in str(ct).lower()
+                except Exception:
+                    pass
+        pdf_warning = '⚠ PDF document detected — use scrape_tool(page=N) to read page by page\n\n' if is_pdf else ''
+
         try:
             pos = await self.session.get_scroll_position()
             scroll_y  = pos.get('scrollY', 0)
@@ -74,6 +94,7 @@ class Context:
             'max_steps':      max_steps,
             'current_tab':    browser_state.current_tab.to_string() if browser_state.current_tab else 'None',
             'tabs':           browser_state.tabs_to_string(),
+            'pdf_warning':    pdf_warning,
             'scroll_top':     scroll_top,
             'page_structure': browser_state.dom_state.semantic_tree_to_string(),
             'scroll_bottom':  scroll_bottom,

@@ -119,13 +119,57 @@ async def download_tool(url: str = None, filename: str = None, session: Browser 
     return f'Downloaded {filename} from {url} and saved to {path}'
 
 
+async def _extract_pdf(url: str, pages: list[int] = [1]) -> str:
+    import fitz
+    async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
+        resp = await client.get(url)
+        resp.raise_for_status()
+        ct = resp.headers.get('content-type', '')
+        if 'pdf' not in ct.lower() and not url.lower().endswith('.pdf'):
+            return '(Response is not a PDF)'
+    doc = fitz.open(stream=resp.content, filetype='pdf')
+    total = len(doc)
+    requested = sorted(set(max(1, min(p, total)) for p in pages))
+    sections = []
+    for p in requested:
+        text = doc[p - 1].get_text().strip()
+        sections.append(f'--- Page {p} of {total} ---\n{text if text else "(No extractable text on this page)"}')
+    doc.close()
+    last = requested[-1]
+    remaining = total - last
+    footer = f'{remaining} page{"s" if remaining != 1 else ""} remaining after page {last}' if remaining > 0 else 'Last page reached'
+    return '\n\n'.join(sections) + f'\n\n{footer}'
+
+
 @Tool('scrape_tool', model=Scrape)
-async def scrape_tool(prompt: str = None, session: Browser = None, llm=None):
-    '''Extracts content from the current webpage.
-    If prompt is given, uses the LLM to extract only the requested information from the page.
-    If prompt is omitted, returns the full page content as markdown.'''
-    html    = await session.get_page_content()
-    content = markdownify(html)
+async def scrape_tool(prompt: str = None, pages: list[int] = [1], session: Browser = None, llm=None):
+    '''Extracts content from the current webpage or PDF.
+    If prompt is given, uses the LLM to extract only the requested information.
+    If prompt is omitted, returns the full content as markdown (HTML) or plain text (PDF).
+    For PDFs, use pages=[1,5,10] to read specific pages together. If a prompt is given, it is applied across all requested pages combined.'''
+    tab = await session.get_current_tab()
+    url = tab.url if tab else ''
+
+    is_pdf = url.lower().endswith('.pdf')
+    if not is_pdf and url.startswith('http'):
+        try:
+            async with httpx.AsyncClient(follow_redirects=True, timeout=5.0) as client:
+                head = await client.head(url)
+            is_pdf = 'pdf' in head.headers.get('content-type', '').lower()
+        except Exception:
+            try:
+                ct = await session.execute_script(
+                    "(function(){try{return document.contentType}catch(e){return ''}})()"
+                )
+                is_pdf = 'pdf' in str(ct).lower()
+            except Exception:
+                pass
+
+    if is_pdf:
+        content = await _extract_pdf(url, pages=pages)
+    else:
+        html    = await session.get_page_content()
+        content = markdownify(html)
 
     if prompt and llm:
         system = SystemMessage(content=(

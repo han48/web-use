@@ -6,7 +6,7 @@
 {tabs}
 
 **Page Structure:**
-{scroll_top}{page_structure}{scroll_bottom}
+{pdf_warning}{scroll_top}{page_structure}{scroll_bottom}
 
 **Tool Result:** {tool_result}
 

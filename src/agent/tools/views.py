@@ -43,7 +43,8 @@ class Download(SharedBaseModel):
     filename:str=Field(...,description="Local filename to save the downloaded file as (include file extension)",examples=["document.pdf","image.jpg","data.xlsx"])
 
 class Scrape(SharedBaseModel):
-    prompt: str = Field(default=None, description="Optional extraction prompt. If given, the LLM extracts only the requested information from the page content. If omitted, the full page content is returned.", examples=["Extract all product names and prices", "What is the author and publication date?"])
+    prompt: str = Field(default=None, description="Optional extraction prompt. If given, the LLM extracts only the requested information from the page content. If omitted, the full content is returned. Works for both HTML pages and PDFs.", examples=["Extract all product names and prices", "What is the author and publication date?", "Extract all sections and their text from this PDF"])
+    pages: list[int] = Field(default=[1], description="For PDFs only — list of page numbers to read (1-indexed). Pass multiple pages to read them together, e.g. [1, 5, 10]. If a prompt is given, it is applied across all requested pages combined.", examples=[[1], [1, 2, 3], [1, 5, 10]])
 
 class Tab(SharedBaseModel):
     mode:Literal['open','close','switch'] = Field(...,description="Tab operation: 'open' creates new tab, 'close' closes current tab, 'switch' changes to existing tab",examples=['open','close','switch'])
