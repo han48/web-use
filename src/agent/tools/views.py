@@ -58,7 +58,7 @@ class Menu(SharedBaseModel):
     labels:list[str] = Field(...,description="List of visible option labels to select from the dropdown menu (supports single or multiple selection)",examples=[["BMW"],["Option 1","Option 2"]])
 
 class Script(SharedBaseModel):
-    script:str = Field(...,description="The JavaScript code to execute in the current webpage to scrape data. Make sure the script is well-formatted",examples=["console.log('Hello, world!')"])
+    script:str = Field(...,description="JavaScript code to execute on the current page. Wrap in an IIFE with try-catch: (function(){ try { /* code */ } catch(e) { return 'Error: '+e.message } })(). Use for interaction, DOM manipulation, or data extraction when normal tools cannot reach the element.",examples=["(function(){ try { return document.title } catch(e) { return 'Error: '+e.message } })()"])
 
 class HumanInput(SharedBaseModel):
     prompt: str = Field(..., description="Clear question or instruction to ask the human user when assistance is needed", examples=["Please enter the OTP code sent to your phone", "What is your preferred payment method?", "Please solve this CAPTCHA"])

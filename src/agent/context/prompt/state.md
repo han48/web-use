@@ -6,7 +6,7 @@
 {tabs}
 
 **Page Structure:**
-{page_structure}
+{scroll_top}{page_structure}{scroll_bottom}
 
 **Tool Result:** {tool_result}
 
