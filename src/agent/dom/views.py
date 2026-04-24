@@ -102,22 +102,30 @@ class DOMState:
             is_last_child = i == len(node.children) - 1
             self._render_tree(child, lines, new_prefix, is_last_child)
 
+    def _selector(self, node: DOMNode) -> str:
+        id_val = node.attributes.get('id', '')
+        classes = node.attributes.get('class', '').split()[:3]  # cap at 3 classes
+        id_part = f'#{id_val}' if id_val else ''
+        class_part = ''.join(f'.{c}' for c in classes)
+        return f'{node.tag}{id_part}{class_part}'
+
     def _format_node(self, node: DOMNode) -> str:
-        role_suffix = f" [role: {node.role}]" if node.role and node.role != node.tag else ""
+        sel = self._selector(node)
+        role_suffix = f" [{node.role}]" if node.role and node.role != node.tag else ""
         if node.element_type == 'interactive':
             label = f"[#{node.interactive_id}]"
             if node.href:
-                return f"{label} {node.tag}{role_suffix} \"{node.name}\"  → {node.href}"
+                return f"{label} {sel}{role_suffix} \"{node.name}\"  → {node.href}"
             else:
-                return f"{label} {node.tag}{role_suffix} \"{node.name}\""
+                return f"{label} {sel}{role_suffix} \"{node.name}\""
         elif node.element_type == 'scrollable':
-            return f"{node.tag}{role_suffix}  [scrollable] \"{node.name}\""
+            return f"{sel}{role_suffix}  [scrollable] \"{node.name}\""
         elif node.element_type == 'informative':
             content_preview = shorten(node.content or '', width=50)
-            return f"{node.tag}{role_suffix}  \"{content_preview}\""
+            return f"{sel}{role_suffix}  \"{content_preview}\""
         else:
             name_part = f" \"{node.name}\"" if node.name else ""
-            return f"{node.tag}{role_suffix}{name_part}"
+            return f"{sel}{role_suffix}{name_part}"
 
     def interactive_elements_to_string(self)->str:
         if not self.interactive_nodes:

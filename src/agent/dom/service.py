@@ -75,6 +75,8 @@ SAFE_ATTRIBUTES = frozenset({
     # Clickability signals
     'onclick', 'href', 'tabindex',
     'data-tooltip', 'data-id', 'data-qa', 'data-cy',
+    # Identity / styling hooks
+    'class',
 })
 
 _MARK_PAGE_JS = """(function(boxes){
@@ -445,6 +447,7 @@ class DOM:
                     node = DOMNode(
                         tag=tag, role=ax_role, element_type='informative',
                         content=ax_name or inner_text,
+                        attributes=attrs,
                         center=CenterCord(x=cx, y=cy),
                         xpath={'frame': '', 'element': xpath},
                         viewport=(vw, vh),
@@ -466,11 +469,18 @@ class DOM:
                     cur_bid = node_backend[cur] if cur < len(node_backend) else None
                     cur_ax = ax_map.get(cur_bid, {}) if cur_bid else {}
                     cur_name = cur_ax.get('name') or element_text.get(cur) or None
+                    cur_raw = node_attrs[cur] if cur < len(node_attrs) else []
+                    cur_attrs: dict[str, str] = {}
+                    for j in range(0, len(cur_raw) - 1, 2):
+                        k = s(cur_raw[j])
+                        if k in SAFE_ATTRIBUTES:
+                            cur_attrs[k] = s(cur_raw[j + 1])
                     tree_nodes[cur] = DOMNode(
                         tag=cur_tag,
                         role=cur_ax.get('role', cur_tag),
                         element_type='structural',
                         name=cur_name,
+                        attributes=cur_attrs,
                     )
                 cur = node_parent[cur] if cur < len(node_parent) else -1
 
