@@ -1,4 +1,4 @@
-from src.agent.dom.views import DOMElementNode, DOMTextualNode, ScrollElementNode, DOMState, CenterCord, BoundingBox
+from src.agent.dom.views import DOMNode, DOMState, CenterCord, BoundingBox
 from typing import TYPE_CHECKING
 from asyncio import sleep
 import asyncio
@@ -388,8 +388,9 @@ class DOM:
                     continue
 
                 interactive_name_by_ni[ni] = name
-                interactive.append(DOMElementNode(
-                    tag=tag, role=role, name=name,
+                interactive.append(DOMNode(
+                    tag=tag, role=role, element_type='interactive',
+                    name=name,
                     attributes=attrs,
                     center=CenterCord(x=cx, y=cy),
                     bounding_box=BoundingBox(left=round(x), top=round(y), width=round(w), height=round(h)),
@@ -397,16 +398,17 @@ class DOM:
                     viewport=(vw, vh),
                 ))
             elif is_scrollable:
-                scrollable.append(ScrollElementNode(
-                    tag=tag, role=role, name=name,
+                scrollable.append(DOMNode(
+                    tag=tag, role=role, element_type='scrollable',
+                    name=name,
                     attributes=attrs,
                     xpath={'frame': '', 'element': xpath},
                     viewport=(vw, vh),
                 ))
             else:
                 if (tag in INFORMATIVE_TAGS or ax_role in INFORMATIVE_ROLES) and (ax_name or inner_text):
-                    informative.append(DOMTextualNode(
-                        tag=tag, role=ax_role,
+                    informative.append(DOMNode(
+                        tag=tag, role=ax_role, element_type='informative',
                         content=ax_name or inner_text,
                         center=CenterCord(x=cx, y=cy),
                         xpath={'frame': '', 'element': xpath},

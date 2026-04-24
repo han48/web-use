@@ -49,15 +49,13 @@ class Context:
 
         template = _load_template('state.md')
         content = template.format(**{
-            'step':                 step,
-            'max_steps':            max_steps,
-            'current_tab':          browser_state.current_tab.to_string() if browser_state.current_tab else 'None',
-            'tabs':                 browser_state.tabs_to_string(),
-            'interactive_elements': browser_state.dom_state.interactive_elements_to_string(),
-            'scrollable_elements':  browser_state.dom_state.scrollable_elements_to_string(),
-            'informative_elements': browser_state.dom_state.informative_elements_to_string(),
-            'tool_result':          tool_result,
-            'query':                query,
+            'step':           step,
+            'max_steps':      max_steps,
+            'current_tab':    browser_state.current_tab.to_string() if browser_state.current_tab else 'None',
+            'tabs':           browser_state.tabs_to_string(),
+            'page_structure': browser_state.dom_state.semantic_tree_to_string(),
+            'tool_result':    tool_result,
+            'query':          query,
         })
         if nudge:
             content += f'\n\n⚠️ LOOP DETECTED:\n{nudge}'

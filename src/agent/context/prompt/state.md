@@ -5,14 +5,8 @@
 **Open Tabs:**
 {tabs}
 
-**Interactive Elements:**
-{interactive_elements}
-
-**Scrollable Elements:**
-{scrollable_elements}
-
-**Informative Elements:**
-{informative_elements}
+**Page Structure:**
+{page_structure}
 
 **Tool Result:** {tool_result}
 

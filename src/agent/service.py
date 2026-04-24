@@ -149,10 +149,7 @@ class Agent(BaseAgent):
             # Record page fingerprint (browser state is freshly populated by context.state)
             bs = self.browser._browser_state
             if bs and bs.current_tab:
-                dom_text = (
-                    bs.dom_state.interactive_elements_to_string() +
-                    bs.dom_state.informative_elements_to_string()
-                )
+                dom_text = bs.dom_state.semantic_tree_to_string()
                 if self._loop_guard:
                     self._loop_guard.record_page(bs.current_tab.url, dom_text)
 
