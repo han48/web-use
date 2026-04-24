@@ -211,17 +211,18 @@ class DOMState:
             self._render_tree(child, lines, new_prefix, is_last_child)
 
     def _format_node(self, node: DOMNode) -> str:
+        role_suffix = f" [{node.role}]" if node.role and node.role != node.tag else ""
         if node.element_type == 'interactive':
             label = f"[#{node.interactive_id}]"
             if node.href:
-                return f"{label} {node.tag} \"{node.name}\"  → {node.href}"
+                return f"{label} {node.tag}{role_suffix} \"{node.name}\"  → {node.href}"
             else:
-                return f"{label} {node.tag} \"{node.name}\""
+                return f"{label} {node.tag}{role_suffix} \"{node.name}\""
         elif node.element_type == 'scrollable':
-            return f"{node.tag}  [scrollable] \"{node.name}\""
+            return f"{node.tag}{role_suffix}  [scrollable] \"{node.name}\""
         elif node.element_type == 'informative':
             content_preview = shorten(node.content or '', width=50)
-            return f"{node.tag}  \"{content_preview}\""
+            return f"{node.tag}{role_suffix}  \"{content_preview}\""
         else:
             return f"{node.tag}  [role: {node.role}]"
 
