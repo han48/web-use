@@ -14,7 +14,7 @@ import httpx
 
 @Tool('done_tool', model=Done)
 async def done_tool(content: str, session: Browser = None):
-    '''Indicates that the current task has been completed successfully. Use this to signal completion and provide a summary of what was accomplished.'''
+    '''Signals task completion. The content must be a comprehensive markdown report — include all findings, extracted data, tables, prices, URLs, and any limitations in full. Never condense or abbreviate results.'''
     return content
 
 

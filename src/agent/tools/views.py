@@ -6,7 +6,7 @@ class SharedBaseModel(BaseModel):
         extra="allow"
 
 class Done(SharedBaseModel):
-    content:str = Field(...,description="Summary of the completed task in proper markdown format explaining what was accomplished",examples=["The task is completed successfully. User profile updated with new email address."])
+    content:str = Field(...,description="Comprehensive markdown report of the completed task. Include ALL findings, data, and results in full — never condense, abbreviate, or omit details. Use sections: what was accomplished, full extracted data (tables, lists, prices, etc.), URLs referenced, any limitations.",examples=["## Task Completed\n\n### What was accomplished\nSearched Amazon.in for RTX 4060 laptop GPU prices across multiple sellers.\n\n### Findings\n| Seller | Price | Rating |\n|--------|-------|--------|\n| TechDeals | ₹45,999 | 4.3★ |\n| PCStore | ₹47,500 | 4.1★ |\n\n### Source\nhttps://www.amazon.in/s?k=rtx+4060+laptop+gpu"])
 
 class Click(SharedBaseModel):
     index:int = Field(...,description="The index/label of the interactive element to click (buttons, links, checkboxes, tabs, etc.)",examples=[0])
