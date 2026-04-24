@@ -132,7 +132,8 @@ async def _extract_pdf(url: str, pages: list[int] = [1]) -> str:
     requested = sorted(set(max(1, min(p, total)) for p in pages))
     sections = []
     for p in requested:
-        text = doc[p - 1].get_text().strip()
+        html = doc[p - 1].get_text('html')
+        text = markdownify(html).strip()
         sections.append(f'--- Page {p} of {total} ---\n{text if text else "(No extractable text on this page)"}')
     doc.close()
     last = requested[-1]
