@@ -224,7 +224,8 @@ class DOMState:
             content_preview = shorten(node.content or '', width=50)
             return f"{node.tag}{role_suffix}  \"{content_preview}\""
         else:
-            return f"{node.tag}  [role: {node.role}]"
+            name_part = f" \"{node.name}\"" if node.name else ""
+            return f"{node.tag}{role_suffix}{name_part}"
 
     def interactive_elements_to_string(self)->str:
         if not self.interactive_nodes:

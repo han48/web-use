@@ -43,6 +43,12 @@ EXCLUDED_TAGS = frozenset({
     'head', 'br', 'hr',
 })
 
+STRUCTURAL_CONTAINER_TAGS = frozenset({
+    'nav', 'header', 'footer', 'main', 'section', 'article',
+    'form', 'ul', 'ol', 'aside', 'dialog', 'fieldset', 'details',
+    'thead', 'tbody', 'tfoot', 'tr',
+})
+
 SAFE_ATTRIBUTES = frozenset({
     # Identity
     'id', 'name', 'role', 'type',
@@ -136,7 +142,7 @@ class DOM:
             scroll_x = float(scroll_pos.get('scrollX', 0)) if scroll_pos else 0
             scroll_y = float(scroll_pos.get('scrollY', 0)) if scroll_pos else 0
             print(f'[DEBUG] Scroll position: scrollX={scroll_x}, scrollY={scroll_y}')
-            interactive, informative, scrollable = self._parse(snapshot, ax_result, viewport, dpr, scroll_x, scroll_y)
+            interactive, informative, scrollable, tree_root = self._parse(snapshot, ax_result, viewport, dpr, scroll_x, scroll_y)
             print(f'[DEBUG] After parse: interactive={len(interactive)}, informative={len(informative)}, scrollable={len(scrollable)}')
 
             # Coverage check: remove elements hidden behind other elements
@@ -185,7 +191,7 @@ class DOM:
 
         except Exception as e:
             print(f'Failed to get DOM state: {e}')
-            interactive, informative, scrollable, screenshot = [], [], [], None
+            interactive, informative, scrollable, screenshot, tree_root = [], [], [], None, None
 
         selector_map = dict(enumerate(interactive + scrollable))
         return screenshot, DOMState(
@@ -193,6 +199,7 @@ class DOM:
             informative_nodes=informative,
             scrollable_nodes=scrollable,
             selector_map=selector_map,
+            semantic_tree_root=tree_root,
         )
 
     def _parse(
@@ -299,11 +306,13 @@ class DOM:
                 cur = par
             return '/' + '/'.join(parts) if parts else ''
 
-        interactive: list[DOMElementNode]    = []
-        informative: list[DOMTextualNode]    = []
-        scrollable:  list[ScrollElementNode] = []
+        interactive: list[DOMNode] = []
+        informative: list[DOMNode] = []
+        scrollable:  list[DOMNode] = []
         # node index -> name for every interactive element added so far
         interactive_name_by_ni: dict[int, str] = {}
+        # node index -> DOMNode for tree construction
+        ni_to_domnode: dict[int, DOMNode] = {}
 
         for ni in range(len(node_names)):
             # Element nodes only (nodeType 1)
@@ -408,31 +417,74 @@ class DOM:
                     continue
 
                 interactive_name_by_ni[ni] = name
-                interactive.append(DOMNode(
+                node = DOMNode(
                     tag=tag, role=role, element_type='interactive',
                     name=name,
+                    interactive_id=len(interactive),
+                    href=attrs.get('href'),
                     attributes=attrs,
                     center=CenterCord(x=cx, y=cy),
                     bounding_box=BoundingBox(left=round(x), top=round(y), width=round(w), height=round(h)),
                     xpath={'frame': '', 'element': xpath},
                     viewport=(vw, vh),
-                ))
+                )
+                interactive.append(node)
+                ni_to_domnode[ni] = node
             elif is_scrollable:
-                scrollable.append(DOMNode(
+                node = DOMNode(
                     tag=tag, role=role, element_type='scrollable',
                     name=name,
                     attributes=attrs,
                     xpath={'frame': '', 'element': xpath},
                     viewport=(vw, vh),
-                ))
+                )
+                scrollable.append(node)
+                ni_to_domnode[ni] = node
             else:
                 if (tag in INFORMATIVE_TAGS or ax_role in INFORMATIVE_ROLES) and (ax_name or inner_text):
-                    informative.append(DOMNode(
+                    node = DOMNode(
                         tag=tag, role=ax_role, element_type='informative',
                         content=ax_name or inner_text,
                         center=CenterCord(x=cx, y=cy),
                         xpath={'frame': '', 'element': xpath},
                         viewport=(vw, vh),
-                    ))
+                    )
+                    informative.append(node)
+                    ni_to_domnode[ni] = node
 
-        return interactive, informative, scrollable
+        # Build semantic tree from actual DOM parent-child relationships
+        tree_nodes: dict[int, DOMNode] = dict(ni_to_domnode)
+
+        # Walk ancestors of each collected node; add structural containers on demand
+        for ni in list(ni_to_domnode.keys()):
+            cur = node_parent[ni] if ni < len(node_parent) else -1
+            while cur >= 0:
+                if cur in tree_nodes:
+                    break
+                cur_tag = s(node_names[cur]).lower() if cur < len(node_names) else ''
+                if cur_tag in STRUCTURAL_CONTAINER_TAGS:
+                    cur_bid = node_backend[cur] if cur < len(node_backend) else None
+                    cur_ax = ax_map.get(cur_bid, {}) if cur_bid else {}
+                    cur_name = cur_ax.get('name') or element_text.get(cur) or None
+                    tree_nodes[cur] = DOMNode(
+                        tag=cur_tag,
+                        role=cur_ax.get('role', cur_tag),
+                        element_type='structural',
+                        name=cur_name,
+                    )
+                cur = node_parent[cur] if cur < len(node_parent) else -1
+
+        # Attach each tree node to its nearest ancestor in tree_nodes
+        tree_root = DOMNode(tag='document', role='document', element_type='structural')
+        for ni in sorted(tree_nodes.keys()):
+            node = tree_nodes[ni]
+            parent_node = tree_root
+            cur = node_parent[ni] if ni < len(node_parent) else -1
+            while cur >= 0:
+                if cur in tree_nodes:
+                    parent_node = tree_nodes[cur]
+                    break
+                cur = node_parent[cur] if cur < len(node_parent) else -1
+            parent_node.add_child(node)
+
+        return interactive, informative, scrollable, tree_root
