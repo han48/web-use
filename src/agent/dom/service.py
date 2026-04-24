@@ -120,7 +120,7 @@ class DOM:
 
             t0 = time.perf_counter()
 
-            snapshot, ax_result, viewport, dpr = await asyncio.gather(
+            snapshot, ax_result, viewport, dpr, scroll_pos = await asyncio.gather(
                 self.session.send('DOMSnapshot.captureSnapshot', {
                     'computedStyles': COMPUTED_STYLES,
                     'includePaintOrder': True,
@@ -129,10 +129,13 @@ class DOM:
                 self.session.send('Accessibility.getFullAXTree', {}, session_id=sid),
                 self.session.get_viewport(),
                 self.session.execute_script('window.devicePixelRatio || 1'),
+                self.session.get_scroll_position(),
             )
 
             dpr = float(dpr or 1.0)
-            interactive, informative, scrollable = self._parse(snapshot, ax_result, viewport, dpr)
+            scroll_x = float(scroll_pos.get('x', 0)) if scroll_pos else 0
+            scroll_y = float(scroll_pos.get('y', 0)) if scroll_pos else 0
+            interactive, informative, scrollable = self._parse(snapshot, ax_result, viewport, dpr, scroll_x, scroll_y)
 
             # Coverage check: remove elements hidden behind other elements
             if interactive:
@@ -188,6 +191,8 @@ class DOM:
         ax_result: dict,
         viewport: tuple[int, int],
         dpr: float,
+        scroll_x: float = 0,
+        scroll_y: float = 0,
     ) -> tuple[list, list, list]:
         strings = snapshot.get('strings', [])
         docs    = snapshot.get('documents', [])
@@ -325,7 +330,10 @@ class DOM:
             # Viewport check — fixed/sticky elements are always on-screen
             position = get_style(li, _P)
             if position not in ('fixed', 'sticky'):
-                if y + h < -200 or y > vh + 200 or x + w < -200 or x > vw + 200:
+                # Adjust element position by scroll offset to get viewport-relative coordinates
+                viewport_y = y - scroll_y
+                viewport_x = x - scroll_x
+                if viewport_y + h < -200 or viewport_y > vh + 200 or viewport_x + w < -200 or viewport_x > vw + 200:
                     continue
 
             # AX info
