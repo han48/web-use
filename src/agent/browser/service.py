@@ -84,6 +84,7 @@ class Browser:
         self._browser_state: BrowserState | None = None
         self._page = Page(self)
         self.crashed: bool = False
+        self._oauth = None
 
         self._mouse_x: int = 0
         self._mouse_y: int = 0
@@ -582,6 +583,13 @@ class Browser:
     def _set_current_target_id(self, target_id: str | None) -> None:
         self._current_target_id = target_id
         self._session_manager.current_target_id = target_id
+
+    @property
+    def oauth(self):
+        if self._oauth is None:
+            from src.agent.auth import OAuth
+            self._oauth = OAuth(self)
+        return self._oauth
 
     def current_page(self) -> Page:
         return self._page
