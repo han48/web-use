@@ -146,7 +146,7 @@ async def _extract_pdf(url: str, pages: list[int] = [1]) -> str:
 
 @Tool('scrape_tool', model=Scrape)
 async def scrape_tool(prompt: str = None, pages: list[int] = [1], session: Browser = None, llm=None):
-    '''Extracts content from the current webpage or PDF.
+    '''Extracts content from the current webpage or PDF. Captures the entire page DOM — all content regardless of scroll position, not just the visible viewport.
     If prompt is given, uses the LLM to extract only the requested information.
     If prompt is omitted, returns the full content as markdown (HTML) or plain text (PDF).
     For PDFs, use pages=[1,5,10] to read specific pages together. If a prompt is given, it is applied across all requested pages combined.'''
@@ -238,7 +238,7 @@ async def menu_tool(index: int, labels: list[str], session: Browser = None):
 
 @Tool('script_tool', model=Script)
 async def script_tool(script: str, session: Browser = None):
-    '''Executes JavaScript on the current page and returns the result.
+    '''Executes JavaScript on the current page and returns the result. Has full access to the entire DOM — all elements on the page regardless of scroll position or visibility.
     Always wrap in an IIFE with try-catch:
     (function(){ try { /* code */ } catch(e) { return 'Error: '+e.message } })()
     Use only browser APIs (document, window, DOM). Keep return values small.

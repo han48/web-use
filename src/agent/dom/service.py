@@ -128,7 +128,7 @@ class DOM:
     def __init__(self, session: 'Browser'):
         self.session = session
 
-    async def get_state(self, use_vision: bool = False) -> tuple[bytes | None, DOMState]:
+    async def get_state(self, use_vision: bool = False, within_viewport: bool = True) -> tuple[bytes | None, DOMState]:
         try:
             await self.session._wait_for_page(timeout=10.0)
             sid = self.session._get_current_session_id()
@@ -150,11 +150,10 @@ class DOM:
             dpr = float(dpr or 1.0)
             scroll_x = float(scroll_pos.get('scrollX', 0)) if scroll_pos else 0
             scroll_y = float(scroll_pos.get('scrollY', 0)) if scroll_pos else 0
-            interactive, informative, scrollable, tree_root = self._parse(snapshot, ax_result, viewport, dpr, scroll_x, scroll_y)
+            interactive, informative, scrollable, tree_root = self._parse(snapshot, ax_result, viewport, dpr, scroll_x, scroll_y, within_viewport=within_viewport)
 
-            # Coverage check: remove elements hidden behind other elements
-            # elementFromPoint takes viewport coordinates, so subtract scroll offset
-            if interactive:
+            # Coverage check only makes sense for elements currently in the viewport
+            if within_viewport and interactive:
                 payload = [
                     {'tag': n.tag,
                      'cx': n.center.x - scroll_x, 'cy': n.center.y - scroll_y,
@@ -217,6 +216,7 @@ class DOM:
         dpr: float,
         scroll_x: float = 0,
         scroll_y: float = 0,
+        within_viewport: bool = True,
     ) -> tuple[list, list, list]:
         strings = snapshot.get('strings', [])
         docs    = snapshot.get('documents', [])
@@ -382,14 +382,14 @@ class DOM:
             except ValueError:
                 pass
 
-            # Viewport check — fixed/sticky elements are always on-screen
-            position = get_style(li, _P)
-            if position not in ('fixed', 'sticky'):
-                # Adjust element position by scroll offset to get viewport-relative coordinates
-                viewport_y = y - scroll_y
-                viewport_x = x - scroll_x
-                if viewport_y + h < -200 or viewport_y > vh + 200 or viewport_x + w < -200 or viewport_x > vw + 200:
-                    continue
+            # Viewport check — skip when caller wants the full DOM
+            if within_viewport:
+                position = get_style(li, _P)
+                if position not in ('fixed', 'sticky'):
+                    viewport_y = y - scroll_y
+                    viewport_x = x - scroll_x
+                    if viewport_y + h < -200 or viewport_y > vh + 200 or viewport_x + w < -200 or viewport_x > vw + 200:
+                        continue
 
             # AX info
             bid     = node_backend[ni] if ni < len(node_backend) else None

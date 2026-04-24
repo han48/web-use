@@ -893,9 +893,9 @@ class Browser:
 
         raise IndexError(f'Element index {index} out of range (interactive: {interactive_count}, scrollable: {len(state.dom_state.scrollable_nodes)})')
 
-    async def get_state(self, use_vision: bool = False) -> BrowserState:
+    async def get_state(self, use_vision: bool = False, within_viewport: bool = True) -> BrowserState:
         if self._state_watchdog is not None:
-            state = await self._state_watchdog.get_state(use_vision=use_vision)
+            state = await self._state_watchdog.get_state(use_vision=use_vision, within_viewport=within_viewport)
             if state is not None:
                 return state
             if self._browser_state is not None:
@@ -904,7 +904,7 @@ class Browser:
         from src.agent.dom import DOM
 
         dom = DOM(session=self)
-        screenshot, dom_state = await dom.get_state(use_vision=use_vision)
+        screenshot, dom_state = await dom.get_state(use_vision=use_vision, within_viewport=within_viewport)
         tabs = await self.get_all_tabs()
         current_tab = await self.get_current_tab()
         self._browser_state = BrowserState(
