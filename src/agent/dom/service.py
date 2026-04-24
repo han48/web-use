@@ -150,9 +150,7 @@ class DOM:
             dpr = float(dpr or 1.0)
             scroll_x = float(scroll_pos.get('scrollX', 0)) if scroll_pos else 0
             scroll_y = float(scroll_pos.get('scrollY', 0)) if scroll_pos else 0
-            print(f'[DEBUG] Scroll position: scrollX={scroll_x}, scrollY={scroll_y}')
             interactive, informative, scrollable, tree_root = self._parse(snapshot, ax_result, viewport, dpr, scroll_x, scroll_y)
-            print(f'[DEBUG] After parse: interactive={len(interactive)}, informative={len(informative)}, scrollable={len(scrollable)}')
 
             # Coverage check: remove elements hidden behind other elements
             # elementFromPoint takes viewport coordinates, so subtract scroll offset
@@ -391,8 +389,6 @@ class DOM:
                 viewport_y = y - scroll_y
                 viewport_x = x - scroll_x
                 if viewport_y + h < -200 or viewport_y > vh + 200 or viewport_x + w < -200 or viewport_x > vw + 200:
-                    if is_interactive and name:  # Debug: log filtered interactive elements
-                        print(f'[DEBUG FILTERED] {name}: page_y={y}, viewport_y={viewport_y}, vh={vh}, scroll_y={scroll_y}')
                     continue
 
             # AX info

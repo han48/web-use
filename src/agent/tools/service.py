@@ -22,6 +22,7 @@ async def done_tool(content: str, session: Browser = None):
 async def click_tool(index: int, session: Browser = None):
     '''Clicks on interactive elements like buttons, links, checkboxes, radio buttons, tabs, or any clickable UI component. Automatically scrolls the element into view if needed.'''
     element = await session.get_element_by_index(index=index)
+    print(f'[CLICK] label={index} | tag=<{element.tag}> | role={element.role} | name={element.name!r} | attrs={element.attributes} | xpath={element.xpath.get("element", "")}')
     xpath   = element.xpath.get('element', '')
     if xpath:
         await session.scroll_into_view(xpath)
@@ -34,6 +35,7 @@ async def click_tool(index: int, session: Browser = None):
 async def type_tool(index: int, text: str, clear: Literal['True', 'False'] = 'False', press_enter: Literal['True', 'False'] = 'False', session: Browser = None):
     '''Types text into input fields, text areas, search boxes, or any editable element. Can optionally clear existing content before typing.'''
     element = await session.get_element_by_index(index=index)
+    print(f'[TYPE] label={index} | tag=<{element.tag}> | role={element.role} | name={element.name!r} | attrs={element.attributes} | xpath={element.xpath.get("element", "")} | text={text!r}')
     xpath   = element.xpath.get('element', '')
     if xpath:
         await session.scroll_into_view(xpath)
