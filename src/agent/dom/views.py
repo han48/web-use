@@ -211,7 +211,7 @@ class DOMState:
             self._render_tree(child, lines, new_prefix, is_last_child)
 
     def _format_node(self, node: DOMNode) -> str:
-        role_suffix = f" [{node.role}]" if node.role and node.role != node.tag else ""
+        role_suffix = f" [role: {node.role}]" if node.role and node.role != node.tag else ""
         if node.element_type == 'interactive':
             label = f"[#{node.interactive_id}]"
             if node.href:
