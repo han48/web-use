@@ -1,7 +1,7 @@
 from src.agent.tools.views import Click, Type, Wait, Scroll, GoTo, Back, Key, Download, Scrape, Tab, Upload, Menu, Done, Forward, HumanInput, Script
 from src.agent.browser import Browser
 from src.providers.events import LLMEventType
-from src.messages import HumanMessage, SystemMessage
+from src.messages import HumanMessage, SystemMessage, ImageMessage
 from markdownify import markdownify
 from typing import Literal, Optional
 from termcolor import colored
@@ -121,27 +121,38 @@ async def download_tool(url: str = None, filename: str = None, session: Browser 
     return f'Downloaded {filename} from {url} and saved to {path}'
 
 
-async def _extract_pdf(url: str, pages: list[int] = [1]) -> str:
+async def _extract_pdf(url: str, pages: list[int] = [1]) -> tuple[str, list]:
     import fitz
+    from io import BytesIO
     async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
         resp = await client.get(url)
         resp.raise_for_status()
         ct = resp.headers.get('content-type', '')
         if 'pdf' not in ct.lower() and not url.lower().endswith('.pdf'):
-            return '(Response is not a PDF)'
+            return '(Response is not a PDF)', []
     doc = fitz.open(stream=resp.content, filetype='pdf')
     total = len(doc)
     requested = sorted(set(max(1, min(p, total)) for p in pages))
     sections = []
+    pil_images = []
     for p in requested:
         html = doc[p - 1].get_text('html')
         text = markdownify(html).strip()
-        sections.append(f'--- Page {p} of {total} ---\n{text if text else "(No extractable text on this page)"}')
+        if text:
+            sections.append(f'--- Page {p} of {total} ---\n{text}')
+        else:
+            try:
+                from PIL import Image as PILImage
+                pixmap = doc[p - 1].get_pixmap(dpi=150)
+                pil_images.append(PILImage.open(BytesIO(pixmap.tobytes('png'))))
+                sections.append(f'--- Page {p} of {total} ---\n(Image page)')
+            except Exception:
+                sections.append(f'--- Page {p} of {total} ---\n(No extractable text on this page)')
     doc.close()
     last = requested[-1]
     remaining = total - last
     footer = f'{remaining} page{"s" if remaining != 1 else ""} remaining after page {last}' if remaining > 0 else 'Last page reached'
-    return '\n\n'.join(sections) + f'\n\n{footer}'
+    return '\n\n'.join(sections) + f'\n\n{footer}', pil_images
 
 
 @Tool('scrape_tool', model=Scrape)
@@ -169,7 +180,17 @@ async def scrape_tool(prompt: str = None, pages: list[int] = [1], session: Brows
                 pass
 
     if is_pdf:
-        content = await _extract_pdf(url, pages=pages)
+        content, images = await _extract_pdf(url, pages=pages)
+        if images and llm:
+            system = SystemMessage(content=(
+                'You are analyzing pages from a PDF document that contains images. '
+                'Describe what you see in each image in detail.'
+            ))
+            content = prompt if prompt else 'Describe the content of these PDF pages.'
+            msg = ImageMessage(content=content, images=images)
+            event = await llm.ainvoke(messages=[system, msg])
+            if event.type == LLMEventType.TEXT:
+                return f'PDF image content:\n{event.content}'
     else:
         html    = await session.get_page_content()
         content = markdownify(html)
@@ -182,11 +203,11 @@ async def scrape_tool(prompt: str = None, pages: list[int] = [1], session: Brows
             'Be concise and structured. Use markdown lists or tables where appropriate. '
             'If the requested information is not present on the page, say so clearly.'
         ))
-        human = HumanMessage(content=(
+        msg = HumanMessage(content=(
             f'Extraction request: {prompt}\n\n'
             f'Webpage content:\n{content}'
         ))
-        event = await llm.ainvoke(messages=[system, human])
+        event = await llm.ainvoke(messages=[system, msg])
         if event.type == LLMEventType.TEXT:
             return f'Extracted information:\n{event.content}'
 
