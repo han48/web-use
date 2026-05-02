@@ -141,4 +141,63 @@
       }
     });
   } catch (_) {}
+
+  // 15. Viewport glow — blue inset shadow at viewport edges, fading toward center
+  (function () {
+    function injectGlow() {
+      if (document.getElementById('__wu_glow__')) return;
+      var el = document.createElement('div');
+      el.id = '__wu_glow__';
+      el.style.cssText =
+        'position:fixed;top:0;left:0;width:100%;height:100%;' +
+        'pointer-events:none;z-index:2147483647;' +
+        'box-shadow:inset 0 0 60px 8px rgba(30,110,255,0.55);';
+      (document.body || document.documentElement).appendChild(el);
+    }
+    if (document.body) {
+      injectGlow();
+    } else {
+      document.addEventListener('DOMContentLoaded', injectGlow);
+    }
+  })();
+
+  // 16. Cursor indicator — dot driven by the agent, not the physical mouse
+  (function () {
+    function injectCursor() {
+      if (document.getElementById('__wu_cursor__')) return;
+      var cur = document.createElement('div');
+      cur.id = '__wu_cursor__';
+      cur.style.cssText =
+        'position:fixed;top:-20px;left:-20px;width:14px;height:14px;' +
+        'border-radius:50%;' +
+        'background:rgba(30,110,255,0.9);' +
+        'border:2px solid rgba(255,255,255,0.95);' +
+        'box-shadow:0 0 8px 3px rgba(30,110,255,0.55);' +
+        'pointer-events:none;z-index:2147483646;' +
+        'transform:translate(-50%,-50%);';
+      (document.body || document.documentElement).appendChild(cur);
+    }
+
+    window.__wu_set_cursor__ = function (x, y) {
+      var cur = document.getElementById('__wu_cursor__');
+      if (!cur) { injectCursor(); cur = document.getElementById('__wu_cursor__'); }
+      if (cur) { cur.style.left = x + 'px'; cur.style.top = y + 'px'; }
+    };
+
+    window.__wu_click_cursor__ = function () {
+      var cur = document.getElementById('__wu_cursor__');
+      if (!cur) return;
+      cur.style.transform = 'translate(-50%,-50%) scale(1.8)';
+      cur.style.transition = 'transform 0.12s ease,opacity 0.12s ease';
+      setTimeout(function () {
+        cur.style.transform = 'translate(-50%,-50%) scale(1)';
+      }, 120);
+    };
+
+    if (document.body) {
+      injectCursor();
+    } else {
+      document.addEventListener('DOMContentLoaded', injectCursor);
+    }
+  })();
 })();

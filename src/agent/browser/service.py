@@ -797,6 +797,10 @@ class Browser:
             await self.send('Input.dispatchMouseEvent', {'type': 'mouseMoved', 'x': px, 'y': py}, session_id=sid)
             await asyncio.sleep(random.uniform(0.002, 0.008))
         self._mouse_x, self._mouse_y = x, y
+        try:
+            await self.execute_script(f'window.__wu_set_cursor__ && window.__wu_set_cursor__({x},{y})')
+        except Exception:
+            pass
 
     async def click_at(self, x: int, y: int):
         await self.current_page().click_at(x, y)

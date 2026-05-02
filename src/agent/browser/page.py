@@ -76,6 +76,10 @@ class Page:
         await self.browser.send('Input.dispatchMouseEvent', {
             'type': 'mousePressed', 'x': jx, 'y': jy, 'button': 'left', 'clickCount': 1,
         }, session_id=sid)
+        try:
+            await self.execute_script('window.__wu_click_cursor__ && window.__wu_click_cursor__()')
+        except Exception:
+            pass
         await asyncio.sleep(random.uniform(0.05, 0.15))
         await self.browser.send('Input.dispatchMouseEvent', {
             'type': 'mouseReleased', 'x': jx, 'y': jy, 'button': 'left', 'clickCount': 1,
