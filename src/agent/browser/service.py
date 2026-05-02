@@ -61,8 +61,9 @@ def _parse_key_combo(keys_str: str):
 
 
 class Browser:
-    def __init__(self, config: BrowserConfig = None):
+    def __init__(self, config: BrowserConfig = None, hooks=None):
         self.config = config if config else BrowserConfig()
+        self.hooks = hooks  # Hook | None — set by Agent after construction
 
         if self.config.update_cdp:
             self._update_cdp()
@@ -535,9 +536,12 @@ class Browser:
         session_id = event.get('sessionId')
         if not target_id or not session_id or target_id in self._sessions or info.get('type', '') != 'page':
             return
-        self._session_manager.register_target(target_id, session_id, info.get('url', ''), info.get('title', ''))
+        url = info.get('url', '')
+        self._session_manager.register_target(target_id, session_id, url, info.get('title', ''))
         self._lifecycle[session_id] = deque(maxlen=50)
         await self._init_tab_domains(session_id)
+        if self.hooks:
+            await self.hooks.on_new_tab(url=url, browser=self)
 
     def _on_detached(self, event, _=None):
         session_id = event.get('sessionId')
@@ -553,6 +557,8 @@ class Browser:
             if ready:
                 ready.set()
             self._set_current_target_id(self._session_manager.current_target_id)
+            if self.hooks:
+                asyncio.create_task(self.hooks.on_tab_closed(browser=self))
 
     def _on_target_info_changed(self, event, _=None):
         info = event.get('targetInfo', {})
@@ -707,16 +713,24 @@ class Browser:
             self._begin_navigation_tracking(sid)
         await self.send('Page.navigate', {'url': url, 'transitionType': 'address_bar'}, session_id=sid)
         await self._wait_for_page(timeout=15.0)
+        if self.hooks:
+            await self.hooks.on_navigate(url=url, browser=self)
 
     async def go_back(self):
         self._begin_navigation_tracking(self._get_current_session_id())
         await self.execute_script('history.back()')
         await self._wait_for_page(timeout=10.0)
+        if self.hooks:
+            url = self._session_manager.targets.get(self._current_target_id, {}).get('url', '')
+            await self.hooks.on_navigate(url=url, browser=self)
 
     async def go_forward(self):
         self._begin_navigation_tracking(self._get_current_session_id())
         await self.execute_script('history.forward()')
         await self._wait_for_page(timeout=10.0)
+        if self.hooks:
+            url = self._session_manager.targets.get(self._current_target_id, {}).get('url', '')
+            await self.hooks.on_navigate(url=url, browser=self)
 
     async def _wait_for_page(self, timeout: float = 10.0):
         sid = self._get_current_session_id()

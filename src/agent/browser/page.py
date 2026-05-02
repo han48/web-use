@@ -56,6 +56,10 @@ class Page:
             path = folder_path / f'screenshot_{datetime.now().strftime("%Y_%m_%d_%H_%M_%S")}.jpeg'
             with open(path, 'wb') as f:
                 f.write(data)
+
+        if self.browser.hooks and data:
+            await self.browser.hooks.on_screenshot(data=data, browser=self.browser)
+
         return data
 
     async def get_page_content(self) -> str:
@@ -84,6 +88,8 @@ class Page:
         await self.browser.send('Input.dispatchMouseEvent', {
             'type': 'mouseReleased', 'x': jx, 'y': jy, 'button': 'left', 'clickCount': 1,
         }, session_id=sid)
+        if self.browser.hooks:
+            await self.browser.hooks.on_click(x=jx, y=jy, browser=self.browser)
 
     async def type_text(self, text: str, delay_ms: int = 50) -> None:
         sid = self.browser._get_current_session_id()
@@ -99,6 +105,8 @@ class Page:
             else:
                 delay = random.uniform(0.02, 0.05)
             await asyncio.sleep(delay)
+        if self.browser.hooks:
+            await self.browser.hooks.on_type(text=text, browser=self.browser)
 
     async def key_press(self, keys: str) -> None:
         sid = self.browser._get_current_session_id()
@@ -134,6 +142,9 @@ class Page:
                 'windowsVirtualKeyCode': mod['keyCode'], 'modifiers': 0,
             }, session_id=sid)
 
+        if self.browser.hooks:
+            await self.browser.hooks.on_key_press(keys=keys, browser=self.browser)
+
     async def scroll_page(self, direction: str, amount: int = 500) -> None:
         sid = self.browser._get_current_session_id()
         self.browser.emit_browser_event(StateInvalidatedEvent(session_id=sid, reason='scroll_page'))
@@ -149,6 +160,8 @@ class Page:
                 'deltaY': step_delta + random.uniform(-10, 10),
             }, session_id=sid)
             await asyncio.sleep(random.uniform(0.04, 0.10))
+        if self.browser.hooks:
+            await self.browser.hooks.on_scroll(direction=direction, amount=amount, browser=self.browser)
 
     async def scroll_at(self, x: int, y: int, direction: str, amount: int = 500) -> None:
         sid = self.browser._get_current_session_id()
@@ -162,6 +175,8 @@ class Page:
                 'deltaY': step_delta + random.uniform(-10, 10),
             }, session_id=sid)
             await asyncio.sleep(random.uniform(0.04, 0.10))
+        if self.browser.hooks:
+            await self.browser.hooks.on_scroll(direction=direction, amount=amount, browser=self.browser)
 
     async def get_scroll_position(self) -> dict:
         result = await self.execute_script(

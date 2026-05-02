@@ -9,6 +9,7 @@ from src.agent.loop import LoopGuard
 from src.providers.events import LLMEventType
 from src.messages import ToolMessage
 from src.agent.base import BaseAgent
+from src.hooks import BaseHook, Hook, GlowHook
 from src.tools import Tool
 from rich.markdown import Markdown
 from rich.console import Console
@@ -40,8 +41,11 @@ class Agent(BaseAgent):
         event_subscriber: Callable[[AgentEvent], None] | None = None,
         sensitive_data: dict[str, str] = {},
         keep_alive: bool = False,
+        hooks: list[BaseHook] | None = None,
     ) -> None:
         self.browser = Browser(config=config)
+        self.hook_runner = Hook([GlowHook()] + (hooks or []))
+        self.browser.hooks = self.hook_runner
         self.context = Context(session=self.browser)
         self.use_web_mcp = use_web_mcp
         self.registry = Registry(
@@ -200,16 +204,15 @@ class Agent(BaseAgent):
 
             thought = tool_params.get("thought", "")
             self.event.emit(AgentEvent(type=EventType.THOUGHT, data={"step": step, "thought": thought}))
+            await self.hook_runner.on_thought(step=step, thought=thought, browser=self.browser)
 
+            filtered_params = {k: v for k, v in tool_params.items() if k not in self.registry.NON_TOOL_PARAMS}
             if tool_name != DONE_TOOL_NAME:
                 self.event.emit(AgentEvent(
                     type=EventType.TOOL_CALL,
-                    data={
-                        "step": step,
-                        "tool_name": tool_name,
-                        "tool_params": {k: v for k, v in tool_params.items() if k not in self.registry.NON_TOOL_PARAMS},
-                    },
+                    data={"step": step, "tool_name": tool_name, "tool_params": filtered_params},
                 ))
+                await self.hook_runner.on_tool_call(step=step, tool_name=tool_name, params=filtered_params, browser=self.browser)
 
             # Act: execute tool (resolve sensitive placeholders just before execution)
             exec_params = self._resolve_sensitive(tool_params)
@@ -239,13 +242,9 @@ class Agent(BaseAgent):
             if tool_name != DONE_TOOL_NAME:
                 self.event.emit(AgentEvent(
                     type=EventType.TOOL_RESULT,
-                    data={
-                        "step": step,
-                        "tool_name": tool_name,
-                        "is_success": tool_result_obj.is_success,
-                        "content": content,
-                    },
+                    data={"step": step, "tool_name": tool_name, "is_success": tool_result_obj.is_success, "content": content},
                 ))
+                await self.hook_runner.on_tool_result(step=step, tool_name=tool_name, success=tool_result_obj.is_success, content=content, browser=self.browser)
 
             if not tool_result_obj.is_success:
                 if consecutive_failures >= self.state.max_consecutive_failures:
@@ -254,6 +253,7 @@ class Agent(BaseAgent):
                         f"consecutive failures. Last: {content}"
                     )
                     self.event.emit(AgentEvent(type=EventType.ERROR, data={"step": step, "error": error}))
+                    await self.hook_runner.on_agent_error(error=error, step=step, browser=self.browser)
                     return AgentResult(is_done=False, error=error)
 
             if tool_name == DONE_TOOL_NAME:
@@ -263,6 +263,7 @@ class Agent(BaseAgent):
 
         error = f"Agent reached max steps ({self.state.max_steps}) without completing."
         self.event.emit(AgentEvent(type=EventType.ERROR, data={"step": self.state.max_steps, "error": error}))
+        await self.hook_runner.on_agent_error(error=error, step=self.state.max_steps, browser=self.browser)
         return AgentResult(is_done=False, error=error)
 
     async def ainvoke(self, task: str) -> AgentResult:
@@ -271,14 +272,17 @@ class Agent(BaseAgent):
         await self.browser.ensure_open()
         self.registry.add_extension('session', self.browser)
         self.registry.add_extension('llm', self.llm)
-        await self.browser.show_glow()
+        await self.hook_runner.on_agent_start(task=task, browser=self.browser)
         try:
-            return await self.aloop()
+            result = await self.aloop()
+            await self.hook_runner.on_agent_done(result=result, browser=self.browser)
+            return result
         except Exception as e:
-            self.event.emit(AgentEvent(type=EventType.ERROR, data={"step": self.state.step, "error": str(e)}))
-            return AgentResult(is_done=False, error=str(e))
+            error = str(e)
+            self.event.emit(AgentEvent(type=EventType.ERROR, data={"step": self.state.step, "error": error}))
+            await self.hook_runner.on_agent_error(error=error, step=self.state.step, browser=self.browser)
+            return AgentResult(is_done=False, error=error)
         finally:
-            await self.browser.hide_glow()
             await self.close()
 
     def invoke(self, task: str) -> AgentResult:
