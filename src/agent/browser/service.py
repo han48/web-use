@@ -86,6 +86,9 @@ class Browser:
         self.crashed: bool = False
         self._oauth = None
 
+        self._glow_active: bool = False
+        self._glow_script_id: str | None = None
+
         self._mouse_x: int = 0
         self._mouse_y: int = 0
         self._special_keys = _SPECIAL_KEYS
@@ -835,6 +838,46 @@ class Browser:
 
     async def get_scroll_position(self) -> dict:
         return await self.current_page().get_scroll_position()
+
+    async def show_glow(self) -> None:
+        _GLOW_JS = (
+            "(function(){"
+            "if(document.getElementById('__wu_glow__'))return;"
+            "var el=document.createElement('div');"
+            "el.id='__wu_glow__';"
+            "el.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;"
+            "z-index:2147483647;box-shadow:inset 0 0 60px 8px rgba(30,110,255,0.55);';"
+            "(document.body||document.documentElement).appendChild(el);"
+            "})()"
+        )
+        sid = self._get_current_session_id()
+        self._glow_active = True
+        try:
+            result = await self.send('Page.addScriptToEvaluateOnNewDocument', {'source': _GLOW_JS}, session_id=sid)
+            self._glow_script_id = result.get('identifier')
+        except Exception:
+            pass
+        try:
+            await self.execute_script(_GLOW_JS)
+        except Exception:
+            pass
+
+    async def hide_glow(self) -> None:
+        sid = self._get_current_session_id()
+        self._glow_active = False
+        if self._glow_script_id:
+            try:
+                await self.send('Page.removeScriptToEvaluateOnNewDocument',
+                                {'identifier': self._glow_script_id}, session_id=sid)
+            except Exception:
+                pass
+            self._glow_script_id = None
+        try:
+            await self.execute_script(
+                "(function(){var el=document.getElementById('__wu_glow__');if(el)el.remove();})()"
+            )
+        except Exception:
+            pass
 
     async def get_screenshot(self, full_page: bool = False, save_screenshot: bool = False) -> bytes | None:
         return await self.current_page().get_screenshot(full_page=full_page, save_screenshot=save_screenshot)

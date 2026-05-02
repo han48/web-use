@@ -271,12 +271,14 @@ class Agent(BaseAgent):
         await self.browser.ensure_open()
         self.registry.add_extension('session', self.browser)
         self.registry.add_extension('llm', self.llm)
+        await self.browser.show_glow()
         try:
             return await self.aloop()
         except Exception as e:
             self.event.emit(AgentEvent(type=EventType.ERROR, data={"step": self.state.step, "error": str(e)}))
             return AgentResult(is_done=False, error=str(e))
         finally:
+            await self.browser.hide_glow()
             await self.close()
 
     def invoke(self, task: str) -> AgentResult:

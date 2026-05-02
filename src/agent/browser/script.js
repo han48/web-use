@@ -142,25 +142,6 @@
     });
   } catch (_) {}
 
-  // 15. Viewport glow — blue inset shadow at viewport edges, fading toward center
-  (function () {
-    function injectGlow() {
-      if (document.getElementById('__wu_glow__')) return;
-      var el = document.createElement('div');
-      el.id = '__wu_glow__';
-      el.style.cssText =
-        'position:fixed;top:0;left:0;width:100%;height:100%;' +
-        'pointer-events:none;z-index:2147483647;' +
-        'box-shadow:inset 0 0 60px 8px rgba(30,110,255,0.55);';
-      (document.body || document.documentElement).appendChild(el);
-    }
-    if (document.body) {
-      injectGlow();
-    } else {
-      document.addEventListener('DOMContentLoaded', injectGlow);
-    }
-  })();
-
   // 16. Cursor indicator — dot driven by the agent, not the physical mouse
   (function () {
     function injectCursor() {
