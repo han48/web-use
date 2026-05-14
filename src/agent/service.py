@@ -185,8 +185,10 @@ class Agent(BaseAgent):
                             continue
                 except Exception as e:
                     last_error = e
+                    error_str = str(e)
+                    is_rate_limit = '429' in error_str or 'rate_limit' in error_str.lower() or 'rate limit' in error_str.lower()
                     if attempt < self.state.max_consecutive_failures - 1:
-                        wait_time = 2 ** (attempt + 1)
+                        wait_time = 30 if is_rate_limit else 2 ** (attempt + 1)
                         self.event.emit(AgentEvent(type=EventType.ERROR, data={"step": step, "error": f"LLM call failed, retrying ({attempt + 1}/{self.state.max_consecutive_failures}): {e}"}))
                         await asyncio.sleep(wait_time)
                     else:

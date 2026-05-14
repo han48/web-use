@@ -257,6 +257,8 @@
   } catch (_) {}
 
   // 21. Screen / outer dimensions consistency — eliminate automation-induced mismatches
+  // NOTE: devicePixelRatio is intentionally NOT spoofed — the DOM service reads it via JS
+  // to convert DOMSnapshot device-pixel bounds to CSS pixels. Spoofing it breaks element detection.
   try {
     const _w = 1920, _h = 1080;
     for (const [prop, val] of [['width', _w], ['height', _h], ['availWidth', _w], ['availHeight', _h - 40]]) {
@@ -266,7 +268,6 @@
     Object.defineProperty(screen, 'pixelDepth',  { get: () => 24, configurable: true });
     Object.defineProperty(window, 'outerWidth',  { get: () => _w, configurable: true });
     Object.defineProperty(window, 'outerHeight', { get: () => _h, configurable: true });
-    Object.defineProperty(window, 'devicePixelRatio', { get: () => 1, configurable: true });
   } catch (_) {}
 
   // 16. Cursor indicator — dot driven by the agent, not the physical mouse

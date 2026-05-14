@@ -145,6 +145,9 @@ class ChatCerebras(BaseChatLLM):
         """
         Process Cerebras API response into LLMEvent.
         """
+        if not response.choices:
+            logger.warning("API returned empty choices — model produced no output (possible: content filtered, context too long, or rate limit)")
+            return LLMEvent(type=LLMEventType.TEXT, content="")
         choice = response.choices[0]
         message = choice.message
         usage_data = response.usage

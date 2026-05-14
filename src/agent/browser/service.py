@@ -804,15 +804,20 @@ class Browser:
     async def _move_mouse(self, x: int, y: int):
         sid = self._get_current_session_id()
         x0, y0 = self._mouse_x, self._mouse_y
-        steps = random.randint(5, 8)
+        dist = ((x - x0) ** 2 + (y - y0) ** 2) ** 0.5
+        steps = max(6, min(18, int(dist / 40)))
         cx = (x0 + x) / 2 + random.randint(-80, 80)
         cy = (y0 + y) / 2 + random.randint(-40, 40)
         for i in range(1, steps + 1):
-            t = i / steps
+            # ease-in-out: slow start, fast middle, slow end
+            t_raw = i / steps
+            t = t_raw * t_raw * (3 - 2 * t_raw)
             px = int((1 - t) ** 2 * x0 + 2 * (1 - t) * t * cx + t ** 2 * x)
             py = int((1 - t) ** 2 * y0 + 2 * (1 - t) * t * cy + t ** 2 * y)
             await self.send('Input.dispatchMouseEvent', {'type': 'mouseMoved', 'x': px, 'y': py}, session_id=sid)
-            await asyncio.sleep(random.uniform(0.002, 0.008))
+            # faster in middle of movement, slower at start/end
+            speed_factor = 1.0 - abs(t_raw - 0.5) * 1.2
+            await asyncio.sleep(random.uniform(0.002, 0.006) / max(0.3, speed_factor))
         self._mouse_x, self._mouse_y = x, y
         try:
             await self.execute_script(f'window.__wu_set_cursor__ && window.__wu_set_cursor__({x},{y})')
@@ -856,12 +861,16 @@ class Browser:
     async def show_glow(self) -> None:
         _GLOW_JS = (
             "(function(){"
+            "function _wu_inject(){"
             "if(document.getElementById('__wu_glow__'))return;"
             "var el=document.createElement('div');"
             "el.id='__wu_glow__';"
             "el.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;"
             "z-index:2147483647;box-shadow:inset 0 0 60px 8px rgba(30,110,255,0.55);';"
             "(document.body||document.documentElement).appendChild(el);"
+            "}"
+            "if(document.body){_wu_inject();}"
+            "else{document.addEventListener('DOMContentLoaded',_wu_inject);}"
             "})()"
         )
         sid = self._get_current_session_id()

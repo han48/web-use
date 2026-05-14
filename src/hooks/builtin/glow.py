@@ -9,6 +9,7 @@ if TYPE_CHECKING:
 
 _GLOW_JS = (
     "(function(){"
+    "function _wu_inject(){"
     "if(document.getElementById('__wu_glow__'))return;"
     "var el=document.createElement('div');"
     "el.id='__wu_glow__';"
@@ -16,6 +17,9 @@ _GLOW_JS = (
     "pointer-events:none;z-index:2147483647;"
     "box-shadow:inset 0 0 60px 8px rgba(30,110,255,0.55);';"
     "(document.body||document.documentElement).appendChild(el);"
+    "}"
+    "if(document.body){_wu_inject();}"
+    "else{document.addEventListener('DOMContentLoaded',_wu_inject);}"
     "})()"
 )
 
@@ -35,6 +39,13 @@ class GlowHook(BaseHook):
 
     async def on_agent_error(self, error: str, step: int, browser: 'Browser') -> None:
         await browser.hide_glow()
+
+    async def on_navigate(self, url: str, browser: 'Browser') -> None:
+        if browser._glow_active:
+            try:
+                await browser.execute_script(_GLOW_JS)
+            except Exception:
+                pass
 
     async def on_new_tab(self, url: str, browser: 'Browser') -> None:
         if browser._glow_active:

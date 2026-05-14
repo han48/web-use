@@ -88,6 +88,20 @@ class Context:
             scroll_top    = f'↑ Scroll up to see previous content — {pct}% scrolled\n\n'
             scroll_bottom = '\n\n↓ Scroll down to see more content'
 
+        dom = browser_state.dom_state
+        no_elements = not dom.interactive_nodes and not dom.scrollable_nodes and not dom.informative_nodes
+        page_structure = dom.semantic_tree_to_string()
+        if no_elements:
+            tab_url = browser_state.current_tab.url if browser_state.current_tab else ''
+            if not tab_url or tab_url == 'about:blank':
+                page_structure = 'Page is blank. Use goto_tool to navigate to a URL.'
+            else:
+                page_structure = (
+                    f'No elements detected on this page.\n'
+                    f'The page may still be loading, blocked by a consent/captcha wall, or use a rendering technique not yet supported.\n'
+                    f'Options: use scrape_tool to read raw page content, goto_tool to navigate elsewhere, or wait_tool then retry.'
+                )
+
         template = _load_template('state.md')
         content = template.format(**{
             'step':           step,
@@ -96,7 +110,7 @@ class Context:
             'tabs':           browser_state.tabs_to_string(),
             'pdf_warning':    pdf_warning,
             'scroll_top':     scroll_top,
-            'page_structure': browser_state.dom_state.semantic_tree_to_string(),
+            'page_structure': page_structure,
             'scroll_bottom':  scroll_bottom,
             'tool_result':    tool_result,
             'query':          query,

@@ -224,6 +224,9 @@ class ChatLiteLLM(BaseChatLLM):
         """
         Process a LiteLLM response (OpenAI-compatible format) into AIMessage or ToolMessage.
         """
+        if not response.choices:
+            logger.warning("API returned empty choices — model produced no output (possible: content filtered, context too long, or rate limit)")
+            return LLMEvent(type=LLMEventType.TEXT, content="")
         choice = response.choices[0]
         message = choice.message
         usage = self._extract_usage(response.usage) if response.usage else None

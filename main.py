@@ -1,12 +1,12 @@
 from src.agent.browser.config import BrowserConfig
-from src.providers.nvidia import ChatNvidia
+from src.providers.mistral import ChatMistral
 from src.agent import Agent
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
 
-llm = ChatNvidia(model='qwen/qwen3.5-122b-a10b')
+llm = ChatMistral(model='mistral-large-2512')
 config = BrowserConfig(browser='chrome', headless=False)
 agent = Agent(config=config, llm=llm, use_vision=False, use_web_mcp=True, max_steps=100, keep_alive=True)
 

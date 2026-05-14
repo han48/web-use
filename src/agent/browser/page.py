@@ -77,6 +77,7 @@ class Page:
         jx = x + random.randint(-3, 3)
         jy = y + random.randint(-3, 3)
         await self.browser._move_mouse(jx, jy)
+        await asyncio.sleep(random.uniform(0.02, 0.06))
         await self.browser.send('Input.dispatchMouseEvent', {
             'type': 'mousePressed', 'x': jx, 'y': jy, 'button': 'left', 'clickCount': 1,
         }, session_id=sid)
@@ -84,7 +85,7 @@ class Page:
             await self.execute_script('window.__wu_click_cursor__ && window.__wu_click_cursor__()')
         except Exception:
             pass
-        await asyncio.sleep(random.uniform(0.05, 0.15))
+        await asyncio.sleep(random.uniform(0.06, 0.18))
         await self.browser.send('Input.dispatchMouseEvent', {
             'type': 'mouseReleased', 'x': jx, 'y': jy, 'button': 'left', 'clickCount': 1,
         }, session_id=sid)
@@ -95,15 +96,39 @@ class Page:
         sid = self.browser._get_current_session_id()
         self.browser.emit_browser_event(StateInvalidatedEvent(session_id=sid, reason='type'))
         for char in text:
+            key_code = ord(char.upper()) if char.isascii() and char.isprintable() else 0
+            code = f'Key{char.upper()}' if char.isalpha() else (
+                'Space' if char == ' ' else
+                'Enter' if char == '\n' else
+                'Period' if char == '.' else
+                'Comma' if char == ',' else ''
+            )
+            key = char if char != '\n' else 'Enter'
+            # keyDown/keyUp carry the key identity only — no text field, so no character insertion
+            # the char event is the sole source of character input
+            await self.browser.send('Input.dispatchKeyEvent', {
+                'type': 'keyDown', 'key': key, 'code': code,
+                'windowsVirtualKeyCode': key_code, 'nativeVirtualKeyCode': key_code,
+            }, session_id=sid)
             await self.browser.send('Input.dispatchKeyEvent', {
                 'type': 'char', 'text': char,
             }, session_id=sid)
+            await self.browser.send('Input.dispatchKeyEvent', {
+                'type': 'keyUp', 'key': key, 'code': code,
+                'windowsVirtualKeyCode': key_code, 'nativeVirtualKeyCode': key_code,
+            }, session_id=sid)
+
             if char == ' ':
-                delay = random.uniform(0.04, 0.08)
+                delay = random.uniform(0.04, 0.09)
             elif char in '.,!?;:\n':
-                delay = random.uniform(0.05, 0.12)
+                delay = random.uniform(0.06, 0.14)
+            elif char.isupper():
+                delay = random.uniform(0.03, 0.07)
             else:
-                delay = random.uniform(0.02, 0.05)
+                delay = random.uniform(0.02, 0.06)
+            # occasional burst pause (simulates thinking mid-word)
+            if random.random() < 0.04:
+                delay += random.uniform(0.1, 0.3)
             await asyncio.sleep(delay)
         if self.browser.hooks:
             await self.browser.hooks.on_type(text=text, browser=self.browser)
@@ -152,14 +177,18 @@ class Page:
         cx = viewport[0] // 2
         cy = viewport[1] // 2
         delta = -amount if direction == 'up' else amount
-        steps = random.randint(3, 6)
-        step_delta = delta / steps
-        for _ in range(steps):
+        steps = random.randint(4, 7)
+        for i in range(steps):
+            # ease-in-out acceleration: slow at edges, fast in middle
+            t = (i + 0.5) / steps
+            weight = t * t * (3 - 2 * t)
+            # distribute delta with a bell curve across steps
+            step_frac = (1 / steps) * (0.6 + 0.8 * (1 - abs(weight - 0.5) * 2))
+            step_delta = delta * step_frac + random.uniform(-8, 8)
             await self.browser.send('Input.dispatchMouseEvent', {
-                'type': 'mouseWheel', 'x': cx, 'y': cy, 'deltaX': 0,
-                'deltaY': step_delta + random.uniform(-10, 10),
+                'type': 'mouseWheel', 'x': cx, 'y': cy, 'deltaX': 0, 'deltaY': step_delta,
             }, session_id=sid)
-            await asyncio.sleep(random.uniform(0.04, 0.10))
+            await asyncio.sleep(random.uniform(0.03, 0.09))
         if self.browser.hooks:
             await self.browser.hooks.on_scroll(direction=direction, amount=amount, browser=self.browser)
 
@@ -167,14 +196,16 @@ class Page:
         sid = self.browser._get_current_session_id()
         self.browser.emit_browser_event(StateInvalidatedEvent(session_id=sid, reason='scroll_at'))
         delta = -amount if direction == 'up' else amount
-        steps = random.randint(3, 6)
-        step_delta = delta / steps
-        for _ in range(steps):
+        steps = random.randint(4, 7)
+        for i in range(steps):
+            t = (i + 0.5) / steps
+            weight = t * t * (3 - 2 * t)
+            step_frac = (1 / steps) * (0.6 + 0.8 * (1 - abs(weight - 0.5) * 2))
+            step_delta = delta * step_frac + random.uniform(-8, 8)
             await self.browser.send('Input.dispatchMouseEvent', {
-                'type': 'mouseWheel', 'x': x, 'y': y, 'deltaX': 0,
-                'deltaY': step_delta + random.uniform(-10, 10),
+                'type': 'mouseWheel', 'x': x, 'y': y, 'deltaX': 0, 'deltaY': step_delta,
             }, session_id=sid)
-            await asyncio.sleep(random.uniform(0.04, 0.10))
+            await asyncio.sleep(random.uniform(0.03, 0.09))
         if self.browser.hooks:
             await self.browser.hooks.on_scroll(direction=direction, amount=amount, browser=self.browser)
 
