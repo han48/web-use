@@ -866,7 +866,7 @@ class Browser:
             "var el=document.createElement('div');"
             "el.id='__wu_glow__';"
             "el.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;"
-            "z-index:2147483647;box-shadow:inset 0 0 60px 8px rgba(30,110,255,0.55);';"
+            "z-index:2147483647;box-shadow:inset 0 0 30px 2px rgba(30,110,255,0.25);';"
             "(document.body||document.documentElement).appendChild(el);"
             "}"
             "if(document.body){_wu_inject();}"

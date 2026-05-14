@@ -322,13 +322,23 @@
             'background:' + (dark ? '#000' : '#fff') + ';' +
             'color:' + (dark ? '#fff' : '#000') + ';}' +
           '#__wu_wordmark__{font-family:monospace;font-size:48px;user-select:none;}' +
-          '@keyframes __wu_blink__{0%,100%{opacity:1}50%{opacity:0}}' +
-          '#__wu_cursor__{display:inline-block;width:2px;height:1em;vertical-align:text-bottom;' +
+          '@keyframes __wu_blink__{0%,49%{opacity:1}50%,100%{opacity:0}}' +
+          '#__wu_cursor__{display:inline-block;width:2px;height:0.85em;vertical-align:text-bottom;' +
             'background:' + (dark ? '#fff' : '#000') + ';' +
-            'margin-left:4px;animation:__wu_blink__ 1.1s step-start infinite;}';
+            'margin-left:3px;animation:__wu_blink__ 0.9s step-start infinite;}';
         document.head.appendChild(style);
         document.body.innerHTML =
-          '<span id="__wu_wordmark__">web-use<span id="__wu_cursor__"></span></span>';
+          '<span id="__wu_wordmark__"><span id="__wu_text__"></span><span id="__wu_cursor__"></span></span>';
+        var words = 'web-use';
+        var textEl = document.getElementById('__wu_text__');
+        var i = 0;
+        function typeNext() {
+          if (i < words.length) {
+            textEl.textContent += words[i++];
+            setTimeout(typeNext, 100 + Math.random() * 90);
+          }
+        }
+        setTimeout(typeNext, 350);
       }
 
       if (document.body) {
