@@ -116,6 +116,13 @@ BROWSER_ARGS = [
     '--window-position=0,0',
     '--disable-sync',
     '--enable-features=WebMCPTesting',
+    # Stealth: suppress automation/test-mode signals visible to sites
+    '--disable-features=IsolateOrigins,site-per-process',
+    '--disable-ipc-flooding-protection',
+    '--password-store=basic',
+    '--use-mock-keychain',
+    '--lang=en-US',
+    '--accept-lang=en-US,en;q=0.9',
 ]
 
 IGNORE_DEFAULT_ARGS = ['--enable-automation']
