@@ -2,8 +2,7 @@ import os
 import json
 import logging
 from typing import Iterator, AsyncIterator, List, Optional, Any, Union, overload
-from mistralai import Mistral
-from mistralai.models import AssistantMessage, UserMessage, SystemMessage as MistralSystemMessage, ToolMessage as MistralToolMessage
+from mistralai.client import Mistral
 from pydantic import BaseModel
 from src.providers.base import BaseChatLLM
 from src.providers.views import TokenUsage, Metadata

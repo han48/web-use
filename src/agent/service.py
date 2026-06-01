@@ -160,6 +160,7 @@ class Agent(BaseAgent):
             # Reason: call LLM with tools
             message: ToolMessage | None = None
             last_error: Exception | None = None
+            llm_event_captured = None
             
             if self.use_web_mcp:
                 await self.registry.refresh_dynamic_tools()
@@ -168,6 +169,15 @@ class Agent(BaseAgent):
                 try:
                     messages = list(chain(self.state.messages, self.state.error_messages))
                     llm_event = await self.llm.ainvoke(messages=messages, tools=self.tools)
+                    llm_event_captured = llm_event
+                    
+                    # Emit reasoning event if model has thinking/reasoning
+                    if llm_event.thinking and llm_event.thinking.content:
+                        self.event.emit(AgentEvent(
+                            type=EventType.REASONING,
+                            data={"step": step, "reasoning": llm_event.thinking.content}
+                        ))
+                    
                     match llm_event.type:
                         case LLMEventType.TOOL_CALL:
                             message = ToolMessage(
@@ -209,6 +219,15 @@ class Agent(BaseAgent):
             await self.hook_runner.on_thought(step=step, thought=thought, browser=self.browser)
 
             filtered_params = {k: v for k, v in tool_params.items() if k not in self.registry.NON_TOOL_PARAMS}
+            if "index" in filtered_params:
+                try:
+                    element = await self.browser.get_element_by_index(index=filtered_params["index"])
+                    xpath = element.xpath.get("element", "")
+                    if xpath:
+                        filtered_params["xpath"] = xpath
+                except Exception:
+                    pass
+
             if tool_name != DONE_TOOL_NAME:
                 self.event.emit(AgentEvent(
                     type=EventType.TOOL_CALL,
